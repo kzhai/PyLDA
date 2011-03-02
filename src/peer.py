@@ -5,7 +5,7 @@
 # Version: 0.2
 # Description:
 #     Define a class Peer, having all data structures needed for a peer.
-#     bala
+#     b
 #-------------------------------------------------------------------------------
 
 class Peer:
