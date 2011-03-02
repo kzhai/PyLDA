@@ -5,7 +5,7 @@
 # Version: 0.2
 # Description:
 #     Define a class Peer, having all data structures needed for a peer.
-#     250
+#     250_again
 #-------------------------------------------------------------------------------
 
 class Peer:
