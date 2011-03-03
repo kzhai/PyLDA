@@ -1,0 +1,18 @@
+
+
+class PitmanYorHierarchy:
+  def __init__(self, parents, base_dist = lambda x: 1):
+    self._counts = defaultdict(FreqDist)
+    self._parents = parents
+
+  def change_count(self, restaurant, dish, delta):
+    self._counts[restaurant].inc(delta)
+
+    parent = self._parents[restaurnt]
+    if delta == -1 and self._counts[restaurant][dish] == 0 and parent:
+      self.change_count(parent, dish, delta)
+
+    if delta == 1 and self._counts[restaurant][dish] == 1 and parent:
+        self.change_count(parent, dish, delta)
+
+  def sample(self, 
