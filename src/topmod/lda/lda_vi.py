@@ -1,3 +1,6 @@
+# Author: kzhai
+# Email: zhaike@cs.umd.edu
+
 from collections import defaultdict;
 from math import log, exp, fabs, pow, isnan, isinf;
 from topmod.util.log_math import log_add;
@@ -6,6 +9,8 @@ from nltk import FreqDist;
 from copy import deepcopy;
 from scipy.special import psi, gammaln, polygamma;
 
+# this is a python implementation of lda based on variational inference.
+# the algorithm follows the documentataion in Blei's paper "Latent Dirichlet Allocation"
 class LdaVariationalInference(object):
        
     # num_topics: the number of topics
@@ -32,11 +37,6 @@ class LdaVariationalInference(object):
         for k in range(self._K):
             self._alpha[k] = random() / self._K
         #print self._alpha
-        
-        # a matrix implementation of alpha
-        #self._alpha = np.matrix(np.empty(self._K))
-        #self._alpha.fill(random() / self._K)
-        #print self._alpha.getT()
 
         # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
         self._data_en = data
@@ -65,11 +65,6 @@ class LdaVariationalInference(object):
             self._gamma[d] = temp
         #print self._gamma
         
-        # a matrix implementation of gamma
-        #self._gamma = np.matrix(np.empty([self._D, self._K]))
-        #self._gamma.fill(1.0 / self._K)
-        #print self._gamma.getT()
-        
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
         self._beta_en = defaultdict(dict)
         for v in self._vocab_en:
@@ -78,10 +73,6 @@ class LdaVariationalInference(object):
                 temp[k] = log(1.0 / self._V_en + random())
             self._beta_en[v] = temp
         #print self._beta_en
-        
-        # a matrix implementation of beta
-        #self._beta_en = np.matrix(np.empty([self._V_en, self._K]))
-        #self._beta_en.fill(1.0 / self._V_en)
 
     def inference(self):
         # initialize the likelihood factor
@@ -134,9 +125,6 @@ class LdaVariationalInference(object):
 
             # iterate till convergence
             for gamma_iteration in range(self._gamma_maximum_iteration):
-#                # initialize the gamma vector to alpha, it will accumulate the normalized phi vectors
-#                gamma_update = self._alpha.deepcopy()
-
                 # initialize gamma update for this document
                 gamma_update = {}
                 for k in range(self._K):
@@ -176,10 +164,6 @@ class LdaVariationalInference(object):
         self._beta_en = self.normalize_beta(beta_normalize_factor, beta)
         
         self._alpha = self.update_alpha(self._alpha, alpha_sufficient_statistics)
-       
-        #print "the alpha vector is ", self._alpha.values()
-        #print "the gamma vector is ", self._gamma.values()
-        #print "the beta matrix is ", self._beta_en.values()
         
         likelihood = likelihood_alpha + likelihood_gamma + likelihood_phi
 
@@ -194,11 +178,7 @@ class LdaVariationalInference(object):
     # however, phi_table will be updated during this function
     def update_phi(self, doc, phi_table, beta, gamma, gamma_update):
         # initialize 
-        clear_phi_table = True
         phi_table.clear()
-
-        phi_sum = {}
-        phi_weighted_sum = {}
         likelihood_phi = 0.0
         
         # iterate over all terms in the particular document
@@ -233,9 +213,7 @@ class LdaVariationalInference(object):
                 
                 # update the K-dimensional row vector gamma[doc]
                 gamma_update[k] = log_add(gamma_update[k], phi_table[term][k])
-                
-            clear_phi_table = False
-         
+                         
         sum_gamma = 0.0
         # gamma update is in log scale, remember?
         for k in range(self._K):
