@@ -2,11 +2,12 @@
 #
 #-------------------------------------------------------------------------------
 # Filename: main.py
-# Version: 0.2
+# Version: 0.3
 # Description:
 #     A simulated client giving commands to the P2P system.
 # Update:
-#     Add communication mechanism(a new object from main passed to each peer)
+#     0.2: Add communication mechanism
+#     0.3: Use sequential ID temporarily for peers
 #-------------------------------------------------------------------------------
 
 import random
@@ -41,7 +42,8 @@ while(True):
 
     # add a new peer with random yet unique pId
     elif option == 'a':
-        pid = random.randint(0,1024)
+        # pid = random.randint(0,1024)
+        pid = len(pid_list) # for simplicity, use sequential id first.
         if pid not in pid_list: # to make sure the pid is unique
             pid_list.append(pid)
             tmpPeer = Peer(pid, comm) 
@@ -76,6 +78,7 @@ quite?(yes/no)")
             if suboption == "yes":
                 print "Terminating system ..."
                 exit(0)
-                
+        else:
+            exit(0)
     else:
         print "Please select a command from the list."
