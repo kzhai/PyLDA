@@ -5,20 +5,14 @@ from collections import defaultdict;
 from math import log, exp, fabs, pow, isnan, isinf;
 from topmod.util.log_math import log_add;
 from random import random;
-from nltk import FreqDist;
 from copy import deepcopy;
 from scipy.special import psi, gammaln, polygamma;
 
 # this is a python implementation of lda based on variational inference.
 # the algorithm follows the documentataion in Blei's paper "Latent Dirichlet Allocation"
-class LdaVariationalInference(object):
-       
-    # num_topics: the number of topics
-    # data: a collection of documents (a corpus) in dict format
-    # key - the document id
-    # value - a list of words in the corresponding document
-    # take note: words are not terms, they are repeatable and thus might be not unique
-    def __init__(self, num_topics, data):
+class LDAVariationalInference(object):
+    # 
+    def __init__(self):
         # initialize the iteration parameters
         self._gamma_converge = 0.000001
         self._gamma_maximum_iteration = 400
@@ -29,6 +23,10 @@ class LdaVariationalInference(object):
         self._em_maximum_iteration = 50
         self._em_converge = 0.00001
         
+    # num_topics: the number of topics
+    # data: a defaultdict(dict) data type, first indexed by doc id, then indexed by term id, the value is the appearance of that term in that doc.
+    # take note: words are not terms, they are repeatable and thus might be not unique
+    def _initialize(self, num_topics, data):
         # initialize the total number of topics.
         self._K = num_topics
         
@@ -39,40 +37,40 @@ class LdaVariationalInference(object):
         #print self._alpha
 
         # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
-        self._data_en = data
+        self._data = data
         
         # initialize the size of the collection, i.e., total number of documents.
-        self._D = len(self._data_en)
+        self._D = len(self._data)
         
         # initialize the vocabulary, i.e. a list of distinct tokens.
-        self._vocab_en = []
+        self._vocab = []
         for token_list in data.values():
-            self._vocab_en += token_list
-        #print len(self._vocab_en)
-        #self._vocab_en = list(set(self._vocab_en))
-        self._vocab_en = set(self._vocab_en)
+            self._vocab += token_list
+        #print len(self._vocab)
+        #self._vocab = list(set(self._vocab))
+        self._vocab = set(self._vocab)
         
         # initialize the size of the vocabulary, i.e. total number of distinct tokens.
-        self._V_en = len(self._vocab_en)
-        #print self._V_en
+        self._V = len(self._vocab)
+        #print self._V
         
         # initialize a D-by-K matrix gamma, valued at N_d/K
         self._gamma = defaultdict(dict)
-        for d in self._data_en.keys():
+        for d in self._data.keys():
             temp = {}
             for k in range(self._K):
-                temp[k] = self._alpha[k] + 1.0 * self._V_en / self._K;
+                temp[k] = self._alpha[k] + 1.0 * self._V / self._K;
             self._gamma[d] = temp
         #print self._gamma
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._beta_en = defaultdict(dict)
-        for v in self._vocab_en:
+        self._beta = defaultdict(dict)
+        for v in self._vocab:
             temp = {}
             for k in range(self._K):
-                temp[k] = log(1.0 / self._V_en + random())
-            self._beta_en[v] = temp
-        #print self._beta_en
+                temp[k] = log(1.0 / self._V + random())
+            self._beta[v] = temp
+        #print self._beta
 
     def inference(self):
         # initialize the likelihood factor
@@ -107,11 +105,11 @@ class LdaVariationalInference(object):
         alpha_sufficient_statistics = {}
         
         # iterate over all documents
-        for doc in self._data_en.keys():
+        for doc in self._data.keys():
             
             # compute the total number of words
             total_word_count = 0
-            for counts in self._data_en[doc].values():
+            for counts in self._data[doc].values():
                 total_word_count += counts
                 
             # initialize the sum of gamma values 
@@ -130,7 +128,7 @@ class LdaVariationalInference(object):
                 for k in range(self._K):
                     gamma_update[k] = log(self._alpha[k])
                 
-                [gamma_update, phi_table, likelihood_phi_temp] = self.update_phi(self._data_en[doc], phi_table, self._beta_en, gamma, gamma_update)
+                [gamma_update, phi_table, likelihood_phi_temp] = self.update_phi(self._data[doc], phi_table, self._beta, gamma, gamma_update)
                 
                 keep_going = False
                 for k in range(self._K):
@@ -153,7 +151,7 @@ class LdaVariationalInference(object):
             
             likelihood_phi += likelihood_phi_temp
                 
-            [beta, beta_normalize_factor] = self.update_beta(self._data_en[doc], phi_table, beta_normalize_factor, beta)
+            [beta, beta_normalize_factor] = self.update_beta(self._data[doc], phi_table, beta_normalize_factor, beta)
 
             for k in range(self._K):
                 if k not in alpha_sufficient_statistics.keys():
@@ -161,7 +159,7 @@ class LdaVariationalInference(object):
                 else:
                     alpha_sufficient_statistics[k] += psi(gamma[k]) - psi(sum_gamma)
             
-        self._beta_en = self.normalize_beta(beta_normalize_factor, beta)
+        self._beta = self.normalize_beta(beta_normalize_factor, beta)
         
         self._alpha = self.update_alpha(self._alpha, alpha_sufficient_statistics)
         
@@ -196,7 +194,7 @@ class LdaVariationalInference(object):
                     phi_table[term][k] = 0
                 
                 phi_table[term][k] = beta[term][k] + psi(gamma[k])
-                #phi[k] = self._beta_en[term][k] + sp.special.psi(self._gamma[doc][k])
+                #phi[k] = self._beta[term][k] + sp.special.psi(self._gamma[doc][k])
                 # this term is constant, could be ignored after normalization
                 #- sp.special.psi(gamma_sum)
                 if(k==0):
@@ -222,6 +220,7 @@ class LdaVariationalInference(object):
         
         return gamma_update, phi_table, likelihood_phi
     
+    #@deprecated: please use update_phi instead, which includes a trick to compute the likelihood_phi
     # doc: a dict data type represents the content of a document, indexed by term_id
     # phi_table: a defaultdict(dict) data type represents the phi matrix, in size of V-by-K, first indexed by term_id, then indexed by topic_id
     # beta: a defaultdict(dict) data type represents the beta mtarix, in size of V-by-K, first indexed by term_id, then indexed by topic_id
@@ -253,7 +252,7 @@ class LdaVariationalInference(object):
                     phi_table[term][k] = 0
                 
                 phi_table[term][k] = beta[term][k] + psi(gamma[k])
-                #phi[k] = self._beta_en[term][k] + sp.special.psi(self._gamma[doc][k])
+                #phi[k] = self._beta[term][k] + sp.special.psi(self._gamma[doc][k])
                 # this term is constant, could be ignored after normalization
                 #- sp.special.psi(gamma_sum)
                 if(k==0):
@@ -436,9 +435,12 @@ class LdaVariationalInference(object):
             
 if __name__ == "__main__":
     from topmod.io.de_news_io import parse_de_news, parse_data
-    d = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt",
-                  doc_limit=1)
+    d = parse_de_news("~/Workspace/TexWorkspace/topics/topicmod/data/de-news/*.en.txt", doc_limit=1)
+#    d = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt", doc_limit=1)
     d = parse_data(d)
     
-    lda = LdaVariationalInference(3, d);
+    print d
+    
+    lda = LDAVariationalInference();
+    lda._initialize(3, d);
     lda.learning();
