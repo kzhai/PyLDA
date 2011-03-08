@@ -6,7 +6,7 @@ def log_add(log_a, log_b):
         return log_b + log(1 + exp(log_a - log_b))
     else:
         return log_a + log(1 + exp(log_b - log_a))
-    
+
 #def log_sub(log_a, log_b):
 #    if log_a < log_b:
 #        return log_b + log(1 - exp(log_a - log_b))

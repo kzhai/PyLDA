@@ -12,14 +12,17 @@ from scipy.special import psi, gammaln, polygamma;
 # the algorithm follows the documentataion in Blei's paper "Latent Dirichlet Allocation"
 class LDAVariationalInference(object):
     # 
-    def __init__(self):
+    def __init__(self, gamma_converge=0.000001, gamma_maximum_iteration=400, alpha_converge=0.000001, alpha maximum_iteration=100, em_maximum_iteration = 5, em_converge = 0.00001):
         # initialize the iteration parameters
-        self._gamma_converge = 0.000001
-        self._gamma_maximum_iteration = 400
-        self._alpha_converge = 0.000001
-        self._alpha_maximum_iteration = 100
         self._alpha_update_decay_factor = 0.9
         self._alpha_maximum_decay = 10
+        
+        self._gamma_converge = 0.000001
+        self._gamma_maximum_iteration = 400
+        
+        self._alpha_converge = 0.000001
+        self._alpha_maximum_iteration = 100
+        
         self._em_maximum_iteration = 50
         self._em_converge = 0.00001
         
