@@ -1,20 +1,41 @@
 from glob import glob;
 from collections import defaultdict;
-
 from topmod.facility.output_function import output_defaultdict_dict, output_dict
-from topmod.io.io_adapter import map_corpus
 
-def parse_de_news_gs(glob_expression, lang="english", doc_limit= -1, title = True, path = False):
-    docs = parse_de_news(glob_expression, lang, doc_limit, title, path);
-    return docs
-
-def parse_de_news_vi(glob_expression, lang="english", doc_limit= -1, title = True, path = False):
-    docs = parse_de_news(glob_expression, lang, doc_limit, title, path);
-    return parse_data(docs)
+#def parse_input(glob_expression, lang="english", doc_limit= -1, delimiter=""):
+#    from nltk.tokenize.treebank import TreebankWordTokenizer
+#    tokenizer = TreebankWordTokenizer()
+#
+#    from nltk.corpus import stopwords
+#    stop = stopwords.words('english')
+#  
+#    from string import ascii_lowercase
+#  
+#    docs = {}
+#    files = glob(glob_expression)
+#    print("Found %i files" % len(files))
+#    for ii in files:
+#        text = open(ii).read().lower()
+#        if delimiter:
+#            sections = text.split(delimiter)
+#        else:
+#            sections = [text]
+#            
+#        if doc_limit > 0 and len(docs) > doc_limit:
+#            print("Passed doc limit %i" % len(docs))
+#            break
+#            #print(ii, len(sections))
+#
+#        for jj in xrange(len(sections)):
+#            words = [x for x in tokenizer.tokenize(sections[jj]) \
+#                                  if (not x in stop) and (min(y in ascii_lowercase for y in x))]
+#            if len(words) != 0:
+#                docs["%s-%i" % (ii, jj)] = words
+#        
+#    return docs
 
 # this method reads in the data from de-news dataset/corpus
-# output a dict data type, indexed by the document id, value is a list of the words in that document, not necessarily unique
-# this format is generally used for gibbs sampling
+# output a dict data type, indexed by the document id
 def parse_de_news(glob_expression, lang="english", doc_limit= -1, title = True, path = False):
     from nltk.tokenize.treebank import TreebankWordTokenizer
     tokenizer = TreebankWordTokenizer()
@@ -62,7 +83,7 @@ def parse_de_news(glob_expression, lang="english", doc_limit= -1, title = True, 
     
     return docs
 
-# this method convert a corpus into proper format for training lda model for variational inference
+# this method convert a corpus into proper format for lda model
 # output a defaultdict(dict) data type, first indexed by the document id, then indexed by the unique tokens
 # corpus: a dict data type, indexed by document id, corresponding value is a list of words (not necessarily unique from each other)
 def parse_data(corpus):
@@ -79,14 +100,73 @@ def parse_data(corpus):
     
     return docs
 
+def map_corpus(corpus_a, corpus_b):
+    common_docs = (set(corpus_a.keys()) & set(corpus_b.keys()));
+   
+    for doc in corpus_a.keys():
+        if doc not in common_docs:
+            del corpus_a[doc]
+            
+    for doc in corpus_b.keys():
+        if doc not in common_docs:
+            del corpus_b[doc]
+            
+    return corpus_a, corpus_b
+
+def output_param(alpha, beta, gamma, dir, index=-1):
+    if index!=-1:
+        postfix = str(index)
+    else:
+        postfix = ""
+
+    alpha_path = dir + "alpha" + postfix
+    f = open(alpha_path, "w");
+    for k in alpha.keys():
+        f.write(str(k) + "\t" + str(alpha[k]) + "\n")
+        
+    beta_path = dir + "beta" + postfix
+    f = open(beta_path, "w");
+    for term in beta.keys():
+        for k in beta[term].keys():
+            f.write(str(term) + "\t" + str(k) + "\t" + str(beta[term][k]) + "\n")
+        
+    gamma_path = dir + "gamma" + postfix
+    f = open(gamma_path, "w");
+    for doc in gamma.keys():
+        for k in gamma[doc].keys():
+            f.write(str(doc) + "\t" + str(k) + "\t" + str(gamma[doc][k]) + "\n")
+            
+def output(d):
+    f = open("/windows/d/Workspace/data/test_data", "w");
+    
+    terms = [];
+    for value in d.values():
+        terms = terms+value;
+    terms = set(terms);
+    
+    termID = {}
+    i = 0;
+    for t in terms:
+        termID[t] = i;
+        i+=1;
+    
+    i = 1;
+    for doc in d.keys():
+        if len(d[doc])==0:
+            continue;
+        f.write(str(i) + "\t");
+        temp = set(d[doc]);
+        for t in temp:
+            f.write(str(termID[t])+ "\t"+str(d[doc].count(t))+"\t");
+        f.write("\n");
+        i+=1;
+
 if __name__ == "__main__":
     data_en = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt", "english",
-                  1, False)
-    print data_en
-    
+                  500, False)
     data_en = parse_data(data_en)
     data_de = parse_de_news("/windows/d/Data/de-news/txt/*.de.txt", "german",
-                  1, False)
+                  500, False)
     data_de = parse_data(data_de)
     print len(data_en), "\t", len(data_de)
     

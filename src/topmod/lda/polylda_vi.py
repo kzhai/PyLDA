@@ -21,8 +21,8 @@ class PolyLdaVariationalInference(object):
         self._alpha_maximum_iteration = 100
         self._alpha_update_decay_factor = 0.9
         self._alpha_maximum_decay = 10
-        self._em_maximum_iteration = 50
-        self._em_converge = 0.000001
+        self._maximum_iteration = 50
+        self._converge = 0.000001
         
         # initialize the total number of topics.
         self._K = num_topics
@@ -465,11 +465,11 @@ class PolyLdaVariationalInference(object):
     def learning(self):
         old_likelihood = 0.0
         
-        for i in range(self._em_maximum_iteration):
+        for i in range(self._maximum_iteration):
             new_likelihood = self.inference()
             print "em iteration is ", (i+1), " likelihood is ", new_likelihood
             
-            if abs((new_likelihood - old_likelihood)/old_likelihood) < self._em_converge:
+            if abs((new_likelihood - old_likelihood)/old_likelihood) < self._converge:
                 break
             
             old_likelihood = new_likelihood
@@ -480,20 +480,18 @@ class PolyLdaVariationalInference(object):
         #print self._gamma
             
 if __name__ == "__main__":
-    from topmod.io.de_news_io import parse_de_news, parse_data, map_corpus
+    from topmod.io.de_news_io import parse_de_news_vi, map_corpus
     from topmod.facility.output_function import output_dict, output_defaultdict_dict
     
-    data_en = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt", "english",
+    data_en = parse_de_news_vi("/windows/d/Data/de-news/txt/*.en.txt", "english",
                   1, False)
-    data_en = parse_data(data_en)
     
 #    data_de = defaultdict(dict)
 #    for doc in data_en.keys():
 #        data_de[doc] = {}
     
-    data_de = parse_de_news("/windows/d/Data/de-news/txt/*.de.txt", "german",
+    data_de = parse_de_news_vi("/windows/d/Data/de-news/txt/*.de.txt", "german",
                   1, False)
-    data_de = parse_data(data_de)
     print len(data_en), "\t", len(data_de)
     
     [data_en, data_de] = map_corpus(data_en, data_de)

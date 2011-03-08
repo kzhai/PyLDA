@@ -1,4 +1,4 @@
-# Author: kzhai
+# Author: Ke Zhai
 # Email: zhaike@cs.umd.edu
 
 from collections import defaultdict;
@@ -24,13 +24,13 @@ class LDAVariationalInference(object):
         self._alpha_converge = 0.000001
         self._alpha_maximum_iteration = 100
         
-        self._em_maximum_iteration = 50
-        self._em_converge = 0.00001
+        self._maximum_iteration = 100
+        self._converge = 0.00001
         
     # num_topics: the number of topics
     # data: a defaultdict(dict) data type, first indexed by doc id, then indexed by term id, the value is the appearance of that term in that doc.
     # take note: words are not terms, they are repeatable and thus might be not unique
-    def _initialize(self, num_topics, data):
+    def _initialize(self, num_topics=10, data):
         # initialize the total number of topics.
         self._K = num_topics
         
@@ -424,11 +424,11 @@ class LDAVariationalInference(object):
     def learning(self):
         old_likelihood = 0.0
         
-        for i in range(self._em_maximum_iteration):
+        for i in range(self._maximum_iteration):
             new_likelihood = self.inference()
             print "em iteration is ", (i+1), " likelihood is ", new_likelihood
             
-            if abs((new_likelihood - old_likelihood)/old_likelihood) < self._em_converge:
+            if abs((new_likelihood - old_likelihood)/old_likelihood) < self._converge:
                 break
             
             old_likelihood = new_likelihood
@@ -438,10 +438,10 @@ class LDAVariationalInference(object):
         print "learning finished..."
             
 if __name__ == "__main__":
-    from topmod.io.de_news_io import parse_de_news, parse_data
-    d = parse_de_news("~/Workspace/TexWorkspace/topics/topicmod/data/de-news/*.en.txt", doc_limit=1)
+    from topmod.io.de_news_io import parse_de_news_vi
+    d = parse_de_news_vi("~/Workspace/TexWorkspace/topics/topicmod/data/de-news/*.en.txt", doc_limit=1)
 #    d = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt", doc_limit=1)
-    d = parse_data(d)
+#    d = parse_data(d)
     
     print d
     
