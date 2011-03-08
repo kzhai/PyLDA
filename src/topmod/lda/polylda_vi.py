@@ -7,7 +7,7 @@ from copy import deepcopy;
 from scipy.special import psi, gammaln, polygamma;
 
 class PolyLdaVariationalInference(object):
-       
+
     # num_topics: the number of topics
     # data: a collection of documents (a corpus) in dict format
     # key - the document id
@@ -32,11 +32,6 @@ class PolyLdaVariationalInference(object):
         for k in range(self._K):
             self._alpha[k] = random()
         #print self._alpha
-        
-        # a matrix implementation of alpha
-        #self._alpha = np.matrix(np.empty(self._K))
-        #self._alpha.fill(random() / self._K)
-        #print self._alpha.getT()
 
         # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
         self._data_en = data_en
