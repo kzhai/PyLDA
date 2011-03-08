@@ -75,8 +75,8 @@ beta: a scalar (FIME: accept vector of size vocab_size)
 
     def _conditional_distribution(self, m, w):
         """
-Conditional distribution (vector of size n_topics).
-"""
+        Conditional distribution (vector of size n_topics).
+        """
         vocab_size = self.nzw.shape[1]
         left = (self.nzw[:,w] + self.beta) / \
                (self.nz + self.beta * vocab_size)
