@@ -484,14 +484,14 @@ if __name__ == "__main__":
     from topmod.facility.output_function import output_dict, output_defaultdict_dict
     
     data_en = parse_de_news_vi("/windows/d/Data/de-news/txt/*.en.txt", "english",
-                  1, 0.4, 0.0001)
+                  1500, 0.3, 0.0001)
     
 #    data_de = defaultdict(dict)
 #    for doc in data_en.keys():
 #        data_de[doc] = {}
     
     data_de = parse_de_news_vi("/windows/d/Data/de-news/txt/*.de.txt", "german",
-                  1, 0.4, 0.0001)
+                  1500, 0.3, 0.0001)
     print len(data_en), "\t", len(data_de)
     
     [data_en, data_de] = map_corpus(data_en, data_de)

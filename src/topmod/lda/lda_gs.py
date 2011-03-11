@@ -31,7 +31,7 @@ class LDAGibbsSampling:
         self._alpha_converge = 0.000001
         self._alpha_maximum_iteration = 100
         
-        self._maximum_iteration = 100
+        self._maximum_iteration = 200
         self._converge = 0.00001
 
         # pending for further changing~
@@ -178,10 +178,10 @@ class LDAGibbsSampling:
 if __name__ == "__main__":
     #d = create_data("/nfshomes/jbg/sentop/topicmod/data/de_news/txt/*.en.txt", doc_limit=50, delimiter="<doc")
     from topmod.io.de_news_io import parse_de_news_gs
-    d = parse_de_news_gs("/windows/d/Data/de-news/txt/*.en.txt", "english", 1, True, False)
+    d = parse_de_news_gs("/windows/d/Data/de-news/txt/*.en.txt", "english", 100, 0.3, 0.0001)
     
     lda = LDAGibbsSampling()
     lda._initialize(d)
 
-    lda.sample(50)
+    lda.sample(25)
     lda.print_topics()
