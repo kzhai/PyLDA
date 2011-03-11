@@ -13,18 +13,17 @@ def log_normalize(distribution):
         distribution[index] -= normalizer
     return distribution
 
-def log_sample(dist):
-    #Sample a key from a dictionary using the values as probabilities (unnormalized)
+# sample a key from a dictionary using the values as probabilities (unnormalized)
+def log_sample(dist):    
     cutoff = random()
     dist = log_normalize(dist)
-    #print "Normalizer: ", normalizer
 
     current = 0
-    for ii in xrange(len(dist)):
-        current += exp(dist[ii])
+    for index in xrange(len(dist)):
+        current += exp(dist[index])
         if current >= cutoff:
-            #print "Chose", i
-            return ii
+            return index
+    
     assert False, "Didn't choose anything: %f %f" % (cutoff, current)
 
 #Returns the gamma function of xx.

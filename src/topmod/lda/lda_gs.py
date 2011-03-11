@@ -7,7 +7,8 @@ from collections import defaultdict
 from math import log, exp
 from random import random
 from nltk import FreqDist
-from scipy.special import psi, gammaln, polygamma;
+from scipy.special import psi, gammaln, polygamma
+from topmod.util.log_math import log_sample
 
 class LDAGibbsSampling:
     def __init__(self, ):
