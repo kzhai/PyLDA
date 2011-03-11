@@ -11,7 +11,7 @@ from scipy.special import psi, gammaln, polygamma;
 # this is a python implementation of lda based on variational inference.
 # the algorithm follows the documentataion in Blei's paper "Latent Dirichlet Allocation"
 class LDAVariationalInference(object):
-    # 
+
     def __init__(self):
     #def __init__(self, gamma_converge=0.000001, gamma_maximum_iteration=400, alpha_converge=0.000001, alpha maximum_iteration=100, em_maximum_iteration = 5, em_converge = 0.00001):
         # initialize the iteration parameters
@@ -439,7 +439,7 @@ class LDAVariationalInference(object):
             
 if __name__ == "__main__":
     from topmod.io.de_news_io import parse_de_news_vi
-    d = parse_de_news_vi("~/Workspace/TexWorkspace/topics/topicmod/data/de-news/*.en.txt", doc_limit=1)
+    d = parse_de_news_vi("~/Workspace/TexWorkspace/topics/topicmod/data/de-news/*.en.txt", doc_limit=1, 0.4, 0.0001)
 #    d = parse_de_news("/windows/d/Data/de-news/txt/*.en.txt", doc_limit=1)
 #    d = parse_data(d)
     
