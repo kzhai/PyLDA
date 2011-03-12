@@ -15,14 +15,14 @@ class PolyLdaVariationalInference(object):
     # take note: words are not terms, they are repeatable and thus might be not unique
     def __init__(self, num_topics, data_en, data_de):
         # initialize the iteration parameters
-        self._gamma_converge = 0.000001
+        self._gamma_converge = 0.0000001
         self._gamma_maximum_iteration = 500
-        self._alpha_converge = 0.000001
+        self._alpha_converge = 0.0000001
         self._alpha_maximum_iteration = 100
         self._alpha_update_decay_factor = 0.9
         self._alpha_maximum_decay = 10
-        self._maximum_iteration = 50
-        self._converge = 0.000001
+        self._maximum_iteration = 500
+        self._converge = 0.0000000001
         
         # initialize the total number of topics.
         self._K = num_topics
@@ -467,7 +467,9 @@ class PolyLdaVariationalInference(object):
         
         for i in range(self._maximum_iteration):
             new_likelihood = self.inference()
-            print "em iteration is ", (i+1), " likelihood is ", new_likelihood
+            
+            if i%50==0:
+                print "em iteration is ", (i+1), " likelihood is ", new_likelihood
             
             if abs((new_likelihood - old_likelihood)/old_likelihood) < self._converge:
                 break
@@ -484,20 +486,15 @@ if __name__ == "__main__":
     from topmod.facility.output_function import output_dict, output_defaultdict_dict
     
     data_en = parse_de_news_vi("/windows/d/Data/de-news/txt/*.en.txt", "english",
-                  1500, 0.3, 0.0001)
-    
-#    data_de = defaultdict(dict)
-#    for doc in data_en.keys():
-#        data_de[doc] = {}
+                  15000, 0.2, 0.00001)
     
     data_de = parse_de_news_vi("/windows/d/Data/de-news/txt/*.de.txt", "german",
-                  1500, 0.3, 0.0001)
+                  15000, 0.2, 0.00001)
     print len(data_en), "\t", len(data_de)
     
     [data_en, data_de] = map_corpus(data_en, data_de)
-    #print len(data_en), "\t", len(data_de)
     
-    lda = PolyLdaVariationalInference(3, data_en, data_de);
+    lda = PolyLdaVariationalInference(7, data_en, data_de);
     lda.learning();
     
     output_dict(lda._alpha, "/windows/d/Data/output/", "alpha.txt")
