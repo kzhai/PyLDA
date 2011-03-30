@@ -5,12 +5,12 @@ from nltk.probability import FreqDist;
 from topmod.facility.output_function import output_defaultdict_dict, output_dict
 from topmod.io.io_adapter import map_corpus
 
-def parse_de_news_gs(glob_expression, lang="english", doc_limit= -1, title = True, path = False):
-    docs = parse_de_news(glob_expression, lang, doc_limit, title, path);
+def parse_de_news_gs(glob_expression, lang="english", doc_limit= -1, max_df_percentage = 1.0, min_df_percentage = 0.0):
+    docs = parse_de_news(glob_expression, lang, doc_limit, max_df_percentage, min_df_percentage);
     return docs
 
-def parse_de_news_vi(glob_expression, lang="english", doc_limit= -1, title = True, path = False):
-    docs = parse_de_news(glob_expression, lang, doc_limit, title, path);
+def parse_de_news_vi(glob_expression, lang="english", doc_limit= -1, max_df_percentage = 1.0, min_df_percentage = 0.0):
+    docs = parse_de_news(glob_expression, lang, doc_limit, max_df_percentage, min_df_percentage);
     return parse_data(docs)
 
 # compute the df counts of the given corpus
@@ -62,7 +62,7 @@ def cutoff_df_de_news(glob_expression, doc_limit= -1, max_df_percentage = 1.0, m
 # output a dict data type, indexed by the document id, value is a list of the words in that document, not necessarily unique
 # this format is generally used for gibbs sampling
 def parse_de_news(glob_expression, lang="english", doc_limit= -1, max_df_percentage = 1.0, min_df_percentage = 0.0):
-    include_title = True
+    include_title = False
     include_path = False
     
     from nltk.tokenize.treebank import TreebankWordTokenizer

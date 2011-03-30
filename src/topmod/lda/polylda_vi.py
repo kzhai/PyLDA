@@ -15,14 +15,14 @@ class PolyLdaVariationalInference(object):
     # take note: words are not terms, they are repeatable and thus might be not unique
     def __init__(self, num_topics, data_en, data_de):
         # initialize the iteration parameters
-        self._gamma_converge = 0.0000001
+        self._gamma_converge = 0.00001
         self._gamma_maximum_iteration = 500
-        self._alpha_converge = 0.0000001
+        self._alpha_converge = 0.00001
         self._alpha_maximum_iteration = 100
         self._alpha_update_decay_factor = 0.9
         self._alpha_maximum_decay = 10
         self._maximum_iteration = 500
-        self._converge = 0.0000000001
+        self._converge = 0.00001
         
         # initialize the total number of topics.
         self._K = num_topics
@@ -486,10 +486,10 @@ if __name__ == "__main__":
     from topmod.facility.output_function import output_dict, output_defaultdict_dict
     
     data_en = parse_de_news_vi("/windows/d/Data/de-news/txt/*.en.txt", "english",
-                  15000, 0.2, 0.00001)
+                  1500, 0.2, 0.0001)
     
     data_de = parse_de_news_vi("/windows/d/Data/de-news/txt/*.de.txt", "german",
-                  15000, 0.2, 0.00001)
+                  1500, 0.2, 0.0001)
     print len(data_en), "\t", len(data_de)
     
     [data_en, data_de] = map_corpus(data_en, data_de)

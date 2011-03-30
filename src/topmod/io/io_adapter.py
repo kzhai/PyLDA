@@ -65,3 +65,20 @@ def output(d):
             f.write(str(termID[t])+ "\t"+str(d[doc].count(t))+"\t");
         f.write("\n");
         i+=1;
+        
+if __name__ == "__main__":
+    from topmod.io.de_news_io import parse_de_news_vi, map_corpus
+    from topmod.facility.output_function import output_dict, output_defaultdict_dict
+    
+    data_en = parse_de_news_vi("/windows/d/Data/de-news/txt/*.en.txt", "english",
+                  1500, 0.2, 0.0001)
+    
+    data_de = parse_de_news_vi("/windows/d/Data/de-news/txt/*.de.txt", "german",
+                  1500, 0.2, 0.0001)
+    print len(data_en), "\t", len(data_de)
+    
+    [data_en, data_de] = map_corpus(data_en, data_de)
+    
+    print data_en.keys()
+    print data_de.keys()
+    print len(data_en), len(data_de)        
