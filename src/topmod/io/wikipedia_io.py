@@ -218,24 +218,10 @@ def parse_data(corpus):
     return docs
 
 if __name__ == "__main__":
-    parsed_docs = output_wikipedia("/windows/d/Data/dewiki/*", "/windows/d/Data/dewiki.txt", "german",
-                  -1, 0.4, 0.0001)
-    print "parsed ", parsed_docs, " german documents in total..."
-    
     parsed_docs = output_wikipedia("/windows/d/Data/enwiki/*", "/windows/d/Data/enwiki.txt", "english",
                   -1, 0.4, 0.0001)
     print "parsed ", parsed_docs, " english documents in total..."
     
-#    data_en = parse_data(data_en)
-#    data_de = parse_wikipedia("/windows/d/Data/de-news/txt/*.de.txt", "german",
-#                  1, 0.4, 0.0001)
-#    data_de = parse_data(data_de)
-#    print len(data_en), "\t", len(data_de)
-#    
-#    [data_en, data_de] = map_corpus(data_en, data_de)
-#    print len(data_en), "\t", len(data_de)
-    
-#lda.initialize(d)
-
-#lda.sample(100)
-#lda.print_topics()
+    parsed_docs = output_wikipedia("/windows/d/Data/dewiki/*", "/windows/d/Data/dewiki.txt", "german",
+                  -1, 0.4, 0.0001)
+    print "parsed ", parsed_docs, " german documents in total..."
