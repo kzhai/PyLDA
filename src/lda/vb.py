@@ -41,7 +41,7 @@ class VariationalBayes(object):
         
     """
     @param num_topics: the number of topics
-    @param data: a defaultdict(FreqDist) data type, first indexed by doc id then indexed by term id
+    @param data: a defaultdict(dict) data type, first indexed by doc id then indexed by term id
     take note: words are not terms, they are repeatable and thus might be not unique
     """
     def _initialize(self, data, num_topics=10):
@@ -159,7 +159,7 @@ class VariationalBayes(object):
 
     """
     """
-    def learning(self, iteration=0):
+    def learning(self, iteration=0, directory="../../output/tmp-output"):
         if iteration<=0:
             iteration = self._maximum_iteration;
         
@@ -168,7 +168,7 @@ class VariationalBayes(object):
             likelihood_phi = 0.0;
 
             # initialize a V-by-K matrix phi contribution
-            phi_table = numpy.random.random((self._V, self._K));
+            phi_table = numpy.zeros((self._V, self._K));
             
             # iterate over all documents
             for doc in self._data.keys():
@@ -221,7 +221,7 @@ class VariationalBayes(object):
             vocab[i] = line.strip();
             i+=1;
 
-        display = self._beta > -numpy.log(self._V / 5);
+        display = self._beta > -numpy.log(self._V);
         assert(display.shape==(self._V, self._K));
         for k in xrange(self._K):
             output_str = str(k) + ": ";
@@ -231,22 +231,11 @@ class VariationalBayes(object):
             print output_str
                     
 if __name__ == "__main__":
-    temp_directory = "../../data/tmp-data/";
-    document_limit = 500;
-    
-    min_df = 0.01;
-    max_df = 0.1;
-
-    from parser.de_news_io import parse_de_news, generate_vocab, output_parsed_corpus
-    doc = parse_de_news("../../data/de-news-raw/txt/*.en.txt", 
-                  document_limit, True, False)
-    voc = generate_vocab(doc, min_df, max_df);
-    output_parsed_corpus(doc, voc, temp_directory);
-    
+    temp_directory = "../../data/test/";
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory+"doc.dat");
     
     lda = VariationalBayes();
-    lda._initialize(d, 10);
-    lda.learning(25);
+    lda._initialize(d, 3);
+    lda.learning(10);
     lda.print_topics(temp_directory+"voc.dat");
