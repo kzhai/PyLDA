@@ -214,26 +214,15 @@ class GibbsSampling:
 
     def print_topics(self, num_words=15):
         for ii in self._topic_words:
-            print("%i:%s\n" % (ii, "\t".join(self._topic_words[ii].keys()[:num_words])))
+            print("%i:%s\n" % (ii, "\t".join(str(item) for item in self._topic_words[ii].keys()[:num_words])))
 
 if __name__ == "__main__":
-    temp_directory = "../../data/tmp-data/";
-    document_limit = 500;
-    
-    min_df = 0.01;
-    max_df = 0.1;
-
-    from parser.de_news_io import parse_de_news_en, generate_vocab, output_parsed_corpus
-    doc = parse_de_news_en("../../data/de-news-raw/txt/*.en.txt", 
-                        document_limit, True, False)
-    voc = generate_vocab(doc, min_df, max_df);
-    output_parsed_corpus(doc, voc, temp_directory);
-    
+    temp_directory = "../../data/test/";
     from util.input_parser import import_monolingual_data;
-    d = import_monolingual_data(temp_directory+"doc.dat");
+    doc = import_monolingual_data(temp_directory+"doc.dat");
     
     lda = GibbsSampling()
     lda._initialize(doc, 3)
 
     lda.sample()
-    lda.print_topics()
+    lda.print_topics(2)
