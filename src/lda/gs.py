@@ -28,7 +28,7 @@ class GibbsSampling:
         # set the document smooth factor
         self._alpha = alpha
         # set the vocabulary smooth factor
-        self._beta = beta
+        self._lambda = beta
         
         self._alpha_maximum_iteration = alpha_maximum_iteration
         self._gibbs_sampling_maximum_iteration = gibbs_sampling_maximum_iteration
@@ -72,12 +72,12 @@ class GibbsSampling:
     
     """
     def optimize_hyperparameters(self, samples=5, step=3.0):
-        rawParam = [math.log(self._alpha), math.log(self._beta)]
+        rawParam = [math.log(self._alpha), math.log(self._lambda)]
 
         for ii in xrange(samples):
-            log_likelihood_old = self.compute_likelihood(self._alpha, self._beta)
+            log_likelihood_old = self.compute_likelihood(self._alpha, self._lambda)
             log_likelihood_new = math.log(random.random()) + log_likelihood_old
-            #print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._beta))
+            #print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha, self._lambda))
 
             l = [x - random.random() * step for x in rawParam]
             r = [x + step for x in rawParam]
@@ -90,10 +90,10 @@ class GibbsSampling:
                 if lp_test > log_likelihood_new:
                     #print(jj)
                     self._alpha = math.exp(rawParamNew[0])
-                    self._beta = math.exp(rawParamNew[1])
+                    self._lambda = math.exp(rawParamNew[1])
                     self._alpha_sum = self._alpha * self._K
-                    self._beta_sum = self._beta * self._V
-                    rawParam = [math.log(self._alpha), math.log(self._beta)]
+                    self._beta_sum = self._lambda * self._V
+                    rawParam = [math.log(self._alpha), math.log(self._lambda)]
                     break
                 else:
                     for dd in xrange(len(rawParamNew)):
@@ -104,7 +104,7 @@ class GibbsSampling:
                         assert l[dd] <= rawParam[dd]
                         assert r[dd] >= rawParam[dd]
 
-            #print("\nNew hyperparameters (%i): %f %f" % (jj, self._alpha, self._beta))
+            #print("\nNew hyperparameters (%i): %f %f" % (jj, self._alpha, self._lambda))
 
     """
     compute the log-likelihood of the model
@@ -148,8 +148,8 @@ class GibbsSampling:
         #this is constant across a document, so we don't need to compute this term
         # val -= math.log(self._doc_topics[doc].N() + self._alpha_sum)
         
-        val += math.log(self._topic_words[topic][word] + self._beta)
-        val -= math.log(self._topic_words[topic].N() + self._V * self._beta)
+        val += math.log(self._topic_words[topic][word] + self._lambda)
+        val -= math.log(self._topic_words[topic].N() + self._V * self._lambda)
     
         return val
 
@@ -208,7 +208,7 @@ class GibbsSampling:
                 for position in xrange(len(self._data[doc])):
                     self.sample_word(doc, position)
                     
-            print("iteration %i %f" % (iter, self.compute_likelihood(self._alpha, self._beta)))
+            print("iteration %i %f" % (iter, self.compute_likelihood(self._alpha, self._lambda)))
             if iter % self._hyper_parameter_sampling_interval == 0:
                 self.optimize_hyperparameters()
 

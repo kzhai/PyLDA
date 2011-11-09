@@ -72,11 +72,12 @@ class VariationalBayes(object):
         self._gamma = numpy.tile(self._alpha + 1.0*self._V/self._K, (self._D, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._beta = 1.0/self._V + numpy.random.random((self._V, self._K));
-        self._beta = self._beta / numpy.sum(self._beta, axis=0)[numpy.newaxis, :];
-        self._beta = numpy.log(self._beta);
+        self._lambda = 1.0/self._V + numpy.random.random((self._V, self._K));
+        self._lambda = self._lambda / numpy.sum(self._lambda, axis=0)[numpy.newaxis, :];
+        self._lambda = numpy.log(self._lambda);
 
     """
+    @deprecated: no longer useful
     """
     def update_phi(self, doc_id, phi_table):
         # update phi and gamma until gamma converges
@@ -85,7 +86,7 @@ class VariationalBayes(object):
             term_counts = numpy.array([self._data[doc_id].values()]);
             assert(term_counts.shape==(1, len(term_ids)));
             
-            phi_contribution = self._beta[term_ids, :] + scipy.special.psi(self._gamma[[doc_id], :]);
+            phi_contribution = self._lambda[term_ids, :] + scipy.special.psi(self._gamma[[doc_id], :]);
             phi_normalizer = numpy.log(numpy.sum(numpy.exp(phi_contribution), axis=1)[:, numpy.newaxis]);
             assert(phi_normalizer.shape==(len(term_ids), 1));
             phi_contribution -= phi_normalizer;
@@ -99,10 +100,10 @@ class VariationalBayes(object):
             if mean_change<=self._gamma_converge_threshold:
                 break;
             
-        likelihood_phi = numpy.sum(numpy.exp(phi_contribution) * ((self._beta[term_ids, :] * term_counts.transpose()) - phi_contribution));
+        likelihood_phi = numpy.sum(numpy.exp(phi_contribution) * ((self._lambda[term_ids, :] * term_counts.transpose()) - phi_contribution));
         assert(phi_contribution.shape==(len(term_ids), self._K));
         phi_table[[term_ids], :] += numpy.exp(phi_contribution);
-                
+
         return phi_table, likelihood_phi
 
     """
@@ -171,21 +172,45 @@ class VariationalBayes(object):
             phi_table = numpy.zeros((self._V, self._K));
             
             # iterate over all documents
-            for doc in self._data.keys():
+            for doc_id in self._data.keys():
                 
                 # compute the total number of words
-                total_word_count = self._data[doc].N()
+                #total_word_count = self._data[doc_id].N()
     
                 # initialize gamma for this document
-                self._gamma[[doc], :] = self._alpha + 1.0 * total_word_count/self._K;
+                #self._gamma[[doc_id], :] = self._alpha + 1.0 * total_word_count/self._K;
                 
                 # iterate till convergence
-                phi_table, likelihood_phi_temp = self.update_phi(doc, phi_table);
-                likelihood_phi+=likelihood_phi_temp;
-            
-            self._beta = phi_table / numpy.sum(phi_table, axis=0)[numpy.newaxis, :];
-            assert(self._beta.shape==(self._V, self._K));
-            self._beta = numpy.log(self._beta);
+                #phi_table, likelihood_phi_temp = self.update_phi(doc_id, phi_table);
+                #likelihood_phi+=likelihood_phi_temp;
+
+                # update phi and gamma until gamma converges
+                for gamma_iteration in xrange(self._gamma_maximum_iteration):
+                    term_ids = numpy.array(self._data[doc_id].keys());
+                    term_counts = numpy.array([self._data[doc_id].values()]);
+                    assert(term_counts.shape==(1, len(term_ids)));
+                    
+                    phi_contribution = self._lambda[term_ids, :] + scipy.special.psi(self._gamma[[doc_id], :]);
+                    phi_normalizer = numpy.log(numpy.sum(numpy.exp(phi_contribution), axis=1)[:, numpy.newaxis]);
+                    assert(phi_normalizer.shape==(len(term_ids), 1));
+                    phi_contribution -= phi_normalizer;
+                    
+                    assert(phi_contribution.shape==(len(term_ids), self._K));
+                    phi_contribution += numpy.log(term_counts.transpose());
+                    
+                    gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(phi_contribution), axis=0));
+                    mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
+                    self._gamma[[doc_id], :] = gamma_update;
+                    if mean_change<=self._gamma_converge_threshold:
+                        break;
+                    
+                likelihood_phi += numpy.sum(numpy.exp(phi_contribution) * ((self._lambda[term_ids, :] * term_counts.transpose()) - phi_contribution));
+                assert(phi_contribution.shape==(len(term_ids), self._K));
+                phi_table[[term_ids], :] += numpy.exp(phi_contribution);
+                
+            self._lambda = phi_table / numpy.sum(phi_table, axis=0)[numpy.newaxis, :];
+            assert(self._lambda.shape==(self._V, self._K));
+            self._lambda = numpy.log(self._lambda);
             
             # compute the log-likelihood of alpha terms
             alpha_sum = numpy.sum(self._alpha, axis=1);
@@ -221,7 +246,7 @@ class VariationalBayes(object):
             vocab[i] = line.strip();
             i+=1;
 
-        display = self._beta > -numpy.log(self._V);
+        display = self._lambda > -numpy.log(self._V);
         assert(display.shape==(self._V, self._K));
         for k in xrange(self._K):
             output_str = str(k) + ": ";
@@ -237,5 +262,5 @@ if __name__ == "__main__":
     
     lda = VariationalBayes();
     lda._initialize(d, 3);
-    lda.learning(10);
+    lda.learning(20);
     lda.print_topics(temp_directory+"voc.dat");
