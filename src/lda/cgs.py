@@ -17,7 +17,7 @@ It only supports symmetric Dirichlet prior over the topic simplex.
 References:
 [1] T. L. Griffiths & M. Steyvers. Finding Scientific Topics. Proceedings of the National Academy of Sciences, 101, 5228-5235, 2004.
 """
-class GibbsSampling:
+class CollapsedGibbsSampling:
     """
     
     """
@@ -221,7 +221,7 @@ if __name__ == "__main__":
     from util.input_parser import import_monolingual_data;
     doc = import_monolingual_data(temp_directory+"doc.dat");
     
-    lda = GibbsSampling()
+    lda = CollapsedGibbsSampling()
     lda._initialize(doc, 3)
 
     lda.sample()

@@ -5,16 +5,16 @@ UncollapsedVariationalBayes for Online LDA
 
 import math, random;
 import numpy, scipy;
-from lda.vb import VariationalBayes as VanillaLDA
+from lda.vb import VariationalBayes as VariationalBayes
 
 """
-This is a python implementation of lda, based on variational inference, with hyper parameter updating.
+This is a python implementation of online lda, based on variational inference, with hyper parameter updating.
 It supports asymmetric Dirichlet prior over the topic simplex.
 
 References:
-[1] D. Blei, A. Ng, and M. Jordan. Latent Dirichlet Allocation. Journal of Machine Learning Research, 3:993-1022, January 2003.
+[1] M. Hoffman, D. Blei, and F. Bach. Online Learning for Latent Dirichlet Allocation. Neural Information Processing Systems, 2010
 """
-class UncollapsedVariationalBayes(VanillaLDA):
+class UncollapsedVariationalBayes(VariationalBayes):
     def __init__(self, alpha_update_decay_factor=0.9, 
              alpha_maximum_decay=10, 
              gamma_converge_threshold=0.000001, 
