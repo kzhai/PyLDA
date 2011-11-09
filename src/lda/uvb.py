@@ -8,7 +8,7 @@ import numpy, scipy;
 from lda.vb import VariationalBayes;
 
 """
-This is a python implementation of lda, based on variational inference, with hyper parameter updating.
+This is a python implementation of vanilla lda, based on variational inference, with hyper parameter updating.
 It supports asymmetric Dirichlet prior over the topic simplex.
 
 References:
