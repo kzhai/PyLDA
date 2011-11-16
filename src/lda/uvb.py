@@ -169,5 +169,5 @@ if __name__ == "__main__":
     
     lda = UncollapsedVariationalBayes();
     lda._initialize(d, 3);
-    lda.learning(10);
+    lda.learning(30);
     lda.print_topics(temp_directory+"voc.dat");

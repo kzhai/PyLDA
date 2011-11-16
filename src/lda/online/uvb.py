@@ -170,19 +170,19 @@ class UncollapsedVariationalBayes(VariationalBayes):
             alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
             alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0)[numpy.newaxis, :];
             self.update_alpha(alpha_sufficient_statistics, rho)
-            print "alpha vector is ", self._alpha
+            print "alpha vector is", self._alpha
             
         print "learning finished..."
 
 if __name__ == "__main__":
-    temp_directory = "../../../data/de-news/en/corpus-2/";
-    #temp_directory = "../../../data/test/";
+    #temp_directory = "../../../data/de-news/en/corpus-2/";
+    temp_directory = "../../../data/test/";
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
     
     lda = UncollapsedVariationalBayes();
-    lda._initialize(d, 20, 0.01, 0.7);
-    lda.learning(50);
-    print lda._log_beta
-    print lda._gamma
+    lda._initialize(d, 3, 0.1, 0.7);
+    lda.learning(300);
+    #print lda._log_beta
+    #print lda._gamma
     lda.print_topics(temp_directory + "voc.dat");
