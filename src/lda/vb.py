@@ -14,26 +14,30 @@ class VariationalBayes(object):
 
     """
     """
-    def __init__(self, alpha_update_decay_factor=0.9, 
-                 alpha_maximum_decay=10, 
-                 gamma_converge_threshold=0.000001, 
-                 gamma_maximum_iteration=100, 
-                 alpha_converge_threshold = 0.000001, 
-                 alpha_maximum_iteration = 100, 
+    def __init__(self,
+                 snapshot_interval=10,
+                 truncate_beta=False,
+                 alpha_update_decay_factor=0.9,
+                 alpha_maximum_decay=10,
+                 gamma_converge_threshold=0.000001,
+                 gamma_maximum_iteration=100,
+                 alpha_converge_threshold=0.000001,
+                 alpha_maximum_iteration=100,
                  #converge_threshold = 0.00001,
-                 global_maximum_iteration = 100,
-                 snapshot_interval = 10):
+                 global_maximum_iteration=100):
         # initialize the iteration parameters
-        self._alpha_update_decay_factor = alpha_update_decay_factor
-        self._alpha_maximum_decay = alpha_maximum_decay
-        self._alpha_converge_threshold = alpha_converge_threshold
-        self._alpha_maximum_iteration = alpha_maximum_iteration
+        self._alpha_update_decay_factor = alpha_update_decay_factor;
+        self._alpha_maximum_decay = alpha_maximum_decay;
+        self._alpha_converge_threshold = alpha_converge_threshold;
+        self._alpha_maximum_iteration = alpha_maximum_iteration;
         
-        self._gamma_converge_threshold = gamma_converge_threshold
-        self._gamma_maximum_iteration = gamma_maximum_iteration
+        self._gamma_converge_threshold = gamma_converge_threshold;
+        self._gamma_maximum_iteration = gamma_maximum_iteration;
         
-        self._global_maximum_iteration = global_maximum_iteration
+        self._global_maximum_iteration = global_maximum_iteration;
         #self._converge_threshold = converge_threshold
+        
+        self._truncate_beta = truncate_beta;
         
         self._gamma_title = "gamma-";
         self._beta_title = "beta-";
@@ -68,10 +72,10 @@ class VariationalBayes(object):
         self._V = len(self._vocab)
         
         # initialize a D-by-K matrix gamma, valued at N_d/K
-        self._gamma = numpy.tile(self._alpha + 1.0*self._V/self._K, (self._D, 1));
+        self._gamma = numpy.tile(self._alpha + 1.0 * self._V / self._K, (self._D, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._log_beta = 1.0/self._V + numpy.random.random((self._V, self._K));
+        self._log_beta = 1.0 / self._V + numpy.random.random((self._V, self._K));
         self._log_beta = self._log_beta / numpy.sum(self._log_beta, axis=0)[numpy.newaxis, :];
         self._log_beta = numpy.log(self._log_beta);
 
@@ -81,7 +85,7 @@ class VariationalBayes(object):
     @param rho: a step size adjustment factor, set to 1 if vanilla lda 
     """
     def update_alpha(self, alpha_sufficient_statistics, rho):
-        assert(alpha_sufficient_statistics.shape==(1, self._K));        
+        assert(alpha_sufficient_statistics.shape == (1, self._K));        
         alpha_update = self._alpha;
         
         decay = 0;
@@ -106,12 +110,12 @@ class VariationalBayes(object):
                 step_size = numpy.power(self._alpha_update_decay_factor, decay) * (alpha_gradient - c) / alpha_hessian;
                 step_size *= rho;
                 #print "step size is", step_size
-                assert(self._alpha.shape==step_size.shape);
+                assert(self._alpha.shape == step_size.shape);
                 
                 if numpy.any(self._alpha <= step_size):
                     singular_hessian = True
                 else:
-                    alpha_update = self._alpha -  step_size;
+                    alpha_update = self._alpha - step_size;
                 
                 if singular_hessian:
                     decay += 1;
@@ -124,7 +128,7 @@ class VariationalBayes(object):
             # check the alpha converge criteria
             mean_change = numpy.mean(abs(alpha_update - self._alpha));
             self._alpha = alpha_update;
-            if mean_change<=self._alpha_converge_threshold:
+            if mean_change <= self._alpha_converge_threshold:
                 break;
 
         return
@@ -132,26 +136,26 @@ class VariationalBayes(object):
     """
     """
     def print_topics(self, term_mapping, top_words=10):
-        output = open(term_mapping);
+        input = open(term_mapping);
         vocab = {};
-        i=0;
-        for line in output:
+        i = 0;
+        for line in input:
             vocab[i] = line.strip();
-            i+=1;
+            i += 1;
 
-        if top_words>=self._V:
+        if top_words >= self._V:
             sorted_beta = numpy.zeros((1, self._K)) - numpy.log(self._V);
         else:
             sorted_beta = numpy.sort(self._log_beta, axis=0);
             sorted_beta = sorted_beta[-top_words, :][numpy.newaxis, :];
 
-        print sorted_beta;
+        #print sorted_beta;
         
         #display = self._log_beta > -numpy.log(self._V);
         #assert(display.shape==(self._V, self._K));
         for k in xrange(self._K):
-            display = self._log_beta[:, [k]] > sorted_beta[:, k];
-            assert(display.shape==(self._V, 1));
+            display = self._log_beta[:, [k]] >= sorted_beta[:, k];
+            assert(display.shape == (self._V, 1));
             output_str = str(k) + ": ";
             for v in xrange(self._V):
                 if display[v, :]:

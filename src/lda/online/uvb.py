@@ -3,7 +3,6 @@ UncollapsedVariationalBayes for Online LDA
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
 
-import math, random;
 import numpy, scipy;
 from lda.vb import VariationalBayes as VariationalBayes
 
@@ -12,26 +11,29 @@ This is a python implementation of online lda, based on variational inference, w
 It supports asymmetric Dirichlet prior over the topic simplex.
 
 References:
-[1] M. Hoffman, D. Blei, and F. Bach. Online Learning for Latent Dirichlet Allocation. Neural Information Processing Systems, 2010
+[1] M. Hoffman, D. Blei, and F. Bach. Online Learning for Latent Dirichlet Allocation. Neural Information Processing Systems, 2010.
 """
 class UncollapsedVariationalBayes(VariationalBayes):
-    def __init__(self, alpha_update_decay_factor=0.9,
-             alpha_maximum_decay=10,
-             gamma_converge_threshold=0.000001,
-             gamma_maximum_iteration=100,
-             alpha_converge_threshold=0.000001,
-             alpha_maximum_iteration=100,
-             model_likelihood_threshold=0.00001,
-             global_maximum_iteration=100,
-             snapshot_interval=10):
-        super(UncollapsedVariationalBayes, self).__init__(alpha_update_decay_factor,
+    def __init__(self,
+                 snapshot_interval=10,
+                 truncate_beta=False,
+                 alpha_update_decay_factor=0.9,
+                 alpha_maximum_decay=10,
+                 gamma_converge_threshold=0.000001,
+                 gamma_maximum_iteration=100,
+                 alpha_converge_threshold=0.000001,
+                 alpha_maximum_iteration=100,
+                 model_likelihood_threshold=0.00001,
+                 global_maximum_iteration=100):
+        super(UncollapsedVariationalBayes, self).__init__(snapshot_interval,
+                                                          truncate_beta,
+                                                          alpha_update_decay_factor,
                                                           alpha_maximum_decay,
                                                           gamma_converge_threshold,
                                                           gamma_maximum_iteration,
                                                           alpha_converge_threshold,
                                                           alpha_maximum_iteration,
-                                                          global_maximum_iteration,
-                                                          snapshot_interval);
+                                                          global_maximum_iteration);
     
     """
     @param num_topics: the number of topics
@@ -150,6 +152,8 @@ class UncollapsedVariationalBayes(VariationalBayes):
             rho = numpy.power((self._tau + i), -self._kappa);
             # @attention: note we are updating lambda, which is a variational dirichet prior for beta matrix. unlike self._gamma, we need to explicitly store self._lambda and use it for update.
             self._lambda = (1.0 - rho) * self._lambda + rho * phi_table;
+            print numpy.max(rho * phi_table, axis=0), numpy.min(rho * phi_table, axis=0), numpy.mean(rho * phi_table, axis=0)
+            print numpy.max(self._lambda, axis=0), numpy.min(self._lambda, axis=0), numpy.mean(self._lambda, axis=0)
             # @attention: note we are computing exp(E[log(theta)]) and store it in log scale in this case.
             self._log_beta = (scipy.special.psi(self._lambda) - scipy.special.psi(numpy.sum(self._lambda, 0))[numpy.newaxis, :]);
             assert(self._log_beta.shape == (self._V, self._K));
@@ -175,8 +179,8 @@ class UncollapsedVariationalBayes(VariationalBayes):
         print "learning finished..."
 
 if __name__ == "__main__":
-    #temp_directory = "../../../data/de-news/en/corpus-2/";
-    temp_directory = "../../../data/test/";
+    temp_directory = "../../../data/de-news/en/corpus-2/";
+    #temp_directory = "../../../data/test/";
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
     

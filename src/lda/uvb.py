@@ -3,7 +3,6 @@ UncollapsedVariationalBayes for Vanilla LDA
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
 
-import math, random;
 import numpy, scipy;
 from lda.vb import VariationalBayes;
 
@@ -17,23 +16,26 @@ References:
 class UncollapsedVariationalBayes(VariationalBayes):
     """
     """
-    def __init__(self, alpha_update_decay_factor=0.9, 
-                 alpha_maximum_decay=10, 
-                 gamma_converge_threshold=0.000001, 
-                 gamma_maximum_iteration=100, 
-                 alpha_converge_threshold = 0.000001, 
-                 alpha_maximum_iteration = 100, 
-                 model_likelihood_threshold = 0.00001,
-                 global_maximum_iteration = 100,
-                 snapshot_interval = 10):
-        super(UncollapsedVariationalBayes, self).__init__(alpha_update_decay_factor, 
-                                                          alpha_maximum_decay, 
-                                                          gamma_converge_threshold, 
-                                                          gamma_maximum_iteration, 
-                                                          alpha_converge_threshold, 
-                                                          alpha_maximum_iteration, 
-                                                          global_maximum_iteration,
-                                                          snapshot_interval);
+    def __init__(self,
+                 snapshot_interval=10,
+                 truncate_beta=False,
+                 alpha_update_decay_factor=0.9,
+                 alpha_maximum_decay=10,
+                 gamma_converge_threshold=0.000001,
+                 gamma_maximum_iteration=100,
+                 alpha_converge_threshold=0.000001,
+                 alpha_maximum_iteration=100,
+                 model_likelihood_threshold=0.00001,
+                 global_maximum_iteration=100):
+        super(UncollapsedVariationalBayes, self).__init__(snapshot_interval,
+                                                          truncate_beta,
+                                                          alpha_update_decay_factor,
+                                                          alpha_maximum_decay,
+                                                          gamma_converge_threshold,
+                                                          gamma_maximum_iteration,
+                                                          alpha_converge_threshold,
+                                                          alpha_maximum_iteration,
+                                                          global_maximum_iteration);
         self._model_likelihood_threshold = model_likelihood_threshold;
 
     
@@ -53,24 +55,24 @@ class UncollapsedVariationalBayes(VariationalBayes):
         for gamma_iteration in xrange(self._gamma_maximum_iteration):
             term_ids = numpy.array(self._data[doc_id].keys());
             term_counts = numpy.array([self._data[doc_id].values()]);
-            assert(term_counts.shape==(1, len(term_ids)));
+            assert(term_counts.shape == (1, len(term_ids)));
             
             phi_contribution = self._log_beta[term_ids, :] + scipy.special.psi(self._gamma[[doc_id], :]);
             phi_normalizer = numpy.log(numpy.sum(numpy.exp(phi_contribution), axis=1)[:, numpy.newaxis]);
-            assert(phi_normalizer.shape==(len(term_ids), 1));
+            assert(phi_normalizer.shape == (len(term_ids), 1));
             phi_contribution -= phi_normalizer;
             
-            assert(phi_contribution.shape==(len(term_ids), self._K));
+            assert(phi_contribution.shape == (len(term_ids), self._K));
             phi_contribution += numpy.log(term_counts.transpose());
             
             gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(phi_contribution), axis=0));
             mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
             self._gamma[[doc_id], :] = gamma_update;
-            if mean_change<=self._gamma_converge_threshold:
+            if mean_change <= self._gamma_converge_threshold:
                 break;
             
         likelihood_phi = numpy.sum(numpy.exp(phi_contribution) * ((self._log_beta[term_ids, :] * term_counts.transpose()) - phi_contribution));
-        assert(phi_contribution.shape==(len(term_ids), self._K));
+        assert(phi_contribution.shape == (len(term_ids), self._K));
         phi_table[[term_ids], :] += numpy.exp(phi_contribution);
 
         return phi_table, likelihood_phi
@@ -87,7 +89,7 @@ class UncollapsedVariationalBayes(VariationalBayes):
     """
     """
     def learning(self, iteration=0, directory="../../output/tmp-output"):
-        if iteration<=0:
+        if iteration <= 0:
             iteration = self._global_maximum_iteration;
         
         old_likelihood = 1.0;
@@ -99,7 +101,6 @@ class UncollapsedVariationalBayes(VariationalBayes):
             
             # iterate over all documents
             for doc_id in self._data.keys():
-                
                 # compute the total number of words
                 #total_word_count = self._data[doc_id].N()
     
@@ -112,30 +113,34 @@ class UncollapsedVariationalBayes(VariationalBayes):
 
                 term_ids = numpy.array(self._data[doc_id].keys());
                 term_counts = numpy.array([self._data[doc_id].values()]);
-                assert(term_counts.shape==(1, len(term_ids)));
+                assert(term_counts.shape == (1, len(term_ids)));
 
                 # update phi and gamma until gamma converges
                 for gamma_iteration in xrange(self._gamma_maximum_iteration):
                     phi_contribution = self._log_beta[term_ids, :] + scipy.special.psi(self._gamma[[doc_id], :]);
                     phi_normalizer = numpy.log(numpy.sum(numpy.exp(phi_contribution), axis=1)[:, numpy.newaxis]);
-                    assert(phi_normalizer.shape==(len(term_ids), 1));
+                    assert(phi_normalizer.shape == (len(term_ids), 1));
                     phi_contribution -= phi_normalizer;
                     
-                    assert(phi_contribution.shape==(len(term_ids), self._K));
+                    assert(phi_contribution.shape == (len(term_ids), self._K));
                     phi_contribution += numpy.log(term_counts.transpose());
                     
                     gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(phi_contribution), axis=0));
                     mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
                     self._gamma[[doc_id], :] = gamma_update;
-                    if mean_change<=self._gamma_converge_threshold:
+                    if mean_change <= self._gamma_converge_threshold:
                         break;
                     
                 likelihood_phi += numpy.sum(numpy.exp(phi_contribution) * ((self._log_beta[term_ids, :] * term_counts.transpose()) - phi_contribution));
-                assert(phi_contribution.shape==(len(term_ids), self._K));
+                assert(phi_contribution.shape == (len(term_ids), self._K));
                 phi_table[[term_ids], :] += numpy.exp(phi_contribution);
                 
             self._log_beta = phi_table / numpy.sum(phi_table, axis=0)[numpy.newaxis, :];
-            assert(self._log_beta.shape==(self._V, self._K));
+            #print numpy.max(self._log_beta, axis=1), numpy.min(self._log_beta, axis=1), numpy.mean(self._log_beta, axis=1)
+            if self._truncate_beta:
+                # truncate beta to the minimum value in the beta matrix
+                self._log_beta[numpy.nonzero(self._log_beta <= numpy.mean(self._log_beta))] = numpy.min(self._log_beta);
+            assert(self._log_beta.shape == (self._V, self._K));
             self._log_beta = numpy.log(self._log_beta);
             
             # compute the log-likelihood of alpha terms
@@ -148,9 +153,9 @@ class UncollapsedVariationalBayes(VariationalBayes):
             likelihood_gamma -= numpy.sum(scipy.special.gammaln(numpy.sum(self._gamma, axis=1)));
     
             new_likelihood = likelihood_alpha + likelihood_gamma + likelihood_phi;
-            print "em iteration is ", (i+1), " likelihood is ", new_likelihood
+            print "em iteration is ", (i + 1), " likelihood is ", new_likelihood
             
-            if abs((new_likelihood - old_likelihood)/old_likelihood) < self._model_likelihood_threshold:
+            if abs((new_likelihood - old_likelihood) / old_likelihood) < self._model_likelihood_threshold:
                 break
             
             old_likelihood = new_likelihood;
@@ -163,11 +168,12 @@ class UncollapsedVariationalBayes(VariationalBayes):
         print "learning finished..."
                     
 if __name__ == "__main__":
+    #temp_directory = "../../data/de-news/en/corpus-2/";
     temp_directory = "../../data/test/";
     from util.input_parser import import_monolingual_data;
-    d = import_monolingual_data(temp_directory+"doc.dat");
+    d = import_monolingual_data(temp_directory + "doc.dat");
     
-    lda = UncollapsedVariationalBayes();
+    lda = UncollapsedVariationalBayes(10, True);
     lda._initialize(d, 3);
     lda.learning(30);
-    lda.print_topics(temp_directory+"voc.dat");
+    lda.print_topics(temp_directory + "voc.dat", 2);
