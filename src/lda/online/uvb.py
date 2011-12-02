@@ -152,8 +152,11 @@ class UncollapsedVariationalBayes(VariationalBayes):
             rho = numpy.power((self._tau + i), -self._kappa);
             # @attention: note we are updating lambda, which is a variational dirichet prior for beta matrix. unlike self._gamma, we need to explicitly store self._lambda and use it for update.
             self._lambda = (1.0 - rho) * self._lambda + rho * phi_table;
-            print numpy.max(rho * phi_table, axis=0), numpy.min(rho * phi_table, axis=0), numpy.mean(rho * phi_table, axis=0)
-            print numpy.max(self._lambda, axis=0), numpy.min(self._lambda, axis=0), numpy.mean(self._lambda, axis=0)
+            if self._truncate_beta:
+                # truncate beta to the minimum value in the beta matrix
+                self._lambda[numpy.nonzero(self._lambda <= numpy.mean(self._lambda))] = numpy.min(self._lambda);
+            #print numpy.max(rho * phi_table, axis=0), numpy.min(rho * phi_table, axis=0), numpy.mean(rho * phi_table, axis=0)
+            #print numpy.max(self._lambda, axis=0), numpy.min(self._lambda, axis=0), numpy.mean(self._lambda, axis=0)
             # @attention: note we are computing exp(E[log(theta)]) and store it in log scale in this case.
             self._log_beta = (scipy.special.psi(self._lambda) - scipy.special.psi(numpy.sum(self._lambda, 0))[numpy.newaxis, :]);
             assert(self._log_beta.shape == (self._V, self._K));
@@ -184,9 +187,9 @@ if __name__ == "__main__":
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
     
-    lda = UncollapsedVariationalBayes();
+    lda = UncollapsedVariationalBayes(10, True);
     lda._initialize(d, 3, 0.1, 0.7);
-    lda.learning(300);
+    lda.learning(100);
     #print lda._log_beta
     #print lda._gamma
     lda.print_topics(temp_directory + "voc.dat");

@@ -136,10 +136,10 @@ class UncollapsedVariationalBayes(VariationalBayes):
                 phi_table[[term_ids], :] += numpy.exp(phi_contribution);
                 
             self._log_beta = phi_table / numpy.sum(phi_table, axis=0)[numpy.newaxis, :];
-            #print numpy.max(self._log_beta, axis=1), numpy.min(self._log_beta, axis=1), numpy.mean(self._log_beta, axis=1)
+            #print numpy.min(phi_table), numpy.sum(phi_table, axis=0)[numpy.newaxis, :]
             if self._truncate_beta:
                 # truncate beta to the minimum value in the beta matrix
-                self._log_beta[numpy.nonzero(self._log_beta <= numpy.mean(self._log_beta))] = numpy.min(self._log_beta);
+                self._log_beta[numpy.nonzero(self._log_beta <= 2.*numpy.mean(self._log_beta))] = numpy.min(self._log_beta);
             assert(self._log_beta.shape == (self._V, self._K));
             self._log_beta = numpy.log(self._log_beta);
             
@@ -168,12 +168,12 @@ class UncollapsedVariationalBayes(VariationalBayes):
         print "learning finished..."
                     
 if __name__ == "__main__":
-    #temp_directory = "../../data/de-news/en/corpus-2/";
-    temp_directory = "../../data/test/";
+    temp_directory = "../../data/de-news/en/corpus-3/";
+    #temp_directory = "../../data/test/";
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
     
     lda = UncollapsedVariationalBayes(10, True);
-    lda._initialize(d, 3);
+    lda._initialize(d, 5);
     lda.learning(30);
-    lda.print_topics(temp_directory + "voc.dat", 2);
+    lda.print_topics(temp_directory + "voc.dat", 5);
