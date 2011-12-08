@@ -168,12 +168,12 @@ class UncollapsedVariationalBayes(VariationalBayes):
         print "learning finished..."
                     
 if __name__ == "__main__":
-    temp_directory = "../../data/de-news/en/corpus-3/";
-    #temp_directory = "../../data/test/";
+    #temp_directory = "../../data/de-news/en/corpus-3/";
+    temp_directory = "../../data/test/";
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
     
     lda = UncollapsedVariationalBayes(10, True);
-    lda._initialize(d, 5);
+    lda._initialize(d, 20);
     lda.learning(30);
     lda.print_topics(temp_directory + "voc.dat", 5);

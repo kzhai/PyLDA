@@ -222,7 +222,7 @@ if __name__ == "__main__":
     doc = import_monolingual_data(temp_directory+"doc.dat");
     
     lda = CollapsedGibbsSampling()
-    lda._initialize(doc, 3)
+    lda._initialize(doc, 10)
 
     lda.sample()
     lda.print_topics(2)
