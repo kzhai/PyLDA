@@ -2,10 +2,9 @@
 VariationalBayes
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
-
-import abc;
-import math, random;
-import numpy, scipy;
+import abc
+import numpy
+import scipy
 
 """
 """
@@ -78,6 +77,8 @@ class VariationalBayes(object):
         self._log_beta = 1.0 / self._V + numpy.random.random((self._V, self._K));
         self._log_beta = self._log_beta / numpy.sum(self._log_beta, axis=0)[numpy.newaxis, :];
         self._log_beta = numpy.log(self._log_beta);
+        
+        self._eta = 0.0001 / self._K;
 
     """
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id

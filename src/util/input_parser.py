@@ -42,7 +42,7 @@ def import_monolingual_data(input_file):
         if doc_count%10000==0:
             print "successfully import " + str(doc_count) + " documents..."
 
-    print "successfully import all documents..."
+    print "successfully import", len(docs), "documents..."
     return docs
 
 """
