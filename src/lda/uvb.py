@@ -2,10 +2,10 @@
 UncollapsedVariationalBayes for Vanilla LDA
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
+
 from lda.vb import VariationalBayes
 import numpy
 import scipy
-
 
 """
 This is a python implementation of vanilla lda, based on variational inference, with hyper parameter updating.
@@ -15,12 +15,11 @@ References:
 [1] D. Blei, A. Ng, and M. Jordan. Latent Dirichlet Allocation. Journal of Machine Learning Research, 3:993-1022, January 2003.
 """
 class UncollapsedVariationalBayes(VariationalBayes):
-#class UncollapsedVariationalBayes():
-
     """
     """
     def __init__(self,
                  snapshot_interval=10,
+                 # TODO: add in truncated beta implementation
                  truncate_beta=False,
                  alpha_update_decay_factor=0.9,
                  alpha_maximum_decay=10,
@@ -110,14 +109,8 @@ class UncollapsedVariationalBayes(VariationalBayes):
                 # initialize gamma for this document
                 self._gamma[[doc_id], :] = self._alpha + 1.0 * total_word_count/self._K;
                 
-                # iterate till convergence
-                #phi_table, likelihood_phi_temp = self.update_phi(doc_id, phi_table);
-                #likelihood_phi+=likelihood_phi_temp;
-
                 term_ids = numpy.array(self._data[doc_id].keys());
                 term_counts = numpy.array([self._data[doc_id].values()]);
-                #print term_ids
-                #print term_counts
                 assert(term_counts.shape == (1, len(term_ids)));
 
                 # update phi and gamma until gamma converges
@@ -128,9 +121,10 @@ class UncollapsedVariationalBayes(VariationalBayes):
                     log_phi -= phi_normalizer;
                     
                     assert(log_phi.shape == (len(term_ids), self._K));
-                    #log_phi += numpy.log(term_counts.transpose());
                     
+                    #log_phi += numpy.log(term_counts.transpose());
                     #gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(log_phi), axis=0));
+
                     gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(log_phi + numpy.log(term_counts.transpose())), axis=0));
                     
                     mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
@@ -146,14 +140,11 @@ class UncollapsedVariationalBayes(VariationalBayes):
                 break;
                 
             self._log_beta = phi_table / numpy.sum(phi_table, axis=0)[numpy.newaxis, :];
-            #print numpy.min(phi_table), numpy.sum(phi_table, axis=0)[numpy.newaxis, :]
             if self._truncate_beta:
                 # truncate beta to the minimum value in the beta matrix
                 self._log_beta[numpy.nonzero(self._log_beta <= 2.*numpy.mean(self._log_beta))] = numpy.min(self._log_beta);
             assert(self._log_beta.shape == (self._V, self._K));
             self._log_beta = numpy.log(self._log_beta);
-            
-            #print self._log_beta;
             
             # compute the log-likelihood of alpha terms
             alpha_sum = numpy.sum(self._alpha, axis=1);
@@ -161,7 +152,6 @@ class UncollapsedVariationalBayes(VariationalBayes):
             likelihood_alpha += scipy.special.gammaln(alpha_sum);
             likelihood_alpha *= self._D;
             
-            #print self._gamma.shape, numpy.sum(self._gamma, axis=1)
             likelihood_gamma = numpy.sum(scipy.special.gammaln(self._gamma));
             likelihood_gamma -= numpy.sum(scipy.special.gammaln(numpy.sum(self._gamma, axis=1)));
     
@@ -169,25 +159,35 @@ class UncollapsedVariationalBayes(VariationalBayes):
             print "em iteration is ", (i + 1), " likelihood is ", new_likelihood
             
             if abs((new_likelihood - old_likelihood) / old_likelihood) < self._model_likelihood_threshold:
+                print "model likelihood converged..."
                 break
             
             old_likelihood = new_likelihood;
             
-            #alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
-            #alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0)[numpy.newaxis, :];
-            #self.update_alpha(alpha_sufficient_statistics)
-            #print "alpha vector is ", self._alpha
+            # compute the sufficient statistics for alpha and update
+            alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
+            alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0)[numpy.newaxis, :];
+            self.update_alpha(alpha_sufficient_statistics)
+            print "alpha vector is ", self._alpha
             
         print "learning finished..."
                     
 if __name__ == "__main__":
     temp_directory = "../../data/de-news/en/corpus-3/";
-    #temp_directory = "../../data/test/";
+    number_of_topics = 5;
+    number_of_iterations = 50;
+    
+    import sys
+    if (len(sys.argv) > 1):
+        temp_directory = sys.argv[1];
+        number_of_topics = int(sys.argv[2]);
+        number_of_iterations = int(sys.argv[3]);
+        
     from util.input_parser import import_monolingual_data;
     d = import_monolingual_data(temp_directory + "doc.dat");
 
-    lda = UncollapsedVariationalBayes(5, True);
-    lda._initialize(d, 5);
-    lda.learning(100);
+    lda = UncollapsedVariationalBayes(5, False);
+    lda._initialize(d, number_of_topics);
+    lda.learning(number_of_iterations);
     print lda._log_beta
     lda.print_topics(temp_directory + "voc.dat", 5);

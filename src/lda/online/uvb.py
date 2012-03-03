@@ -4,7 +4,7 @@ UncollapsedVariationalBayes for Online LDA
 """
 
 import numpy, scipy;
-from lda.vb import VariationalBayes as VariationalBayes
+from lda.vb import VariationalBayes
 
 """
 This is a python implementation of online lda, based on variational inference, with hyper parameter updating.
@@ -116,6 +116,7 @@ class UncollapsedVariationalBayes(VariationalBayes):
             
             # iterate over all documents
             for doc_id in self._data.keys():
+                # randomly choose a subset of documents to process, simulate the online case
                 if numpy.random.random() > self._batch_size:
                     continue;
                 
