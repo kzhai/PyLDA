@@ -2,9 +2,10 @@
 VariationalBayes
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
-import abc
-import numpy
-import scipy
+import abc;
+import numpy;
+import scipy;
+import scipy.special;
 
 """
 """
@@ -15,7 +16,6 @@ class VariationalBayes(object):
     """
     def __init__(self,
                  snapshot_interval=10,
-                 truncate_beta=False,
                  alpha_update_decay_factor=0.9,
                  alpha_maximum_decay=10,
                  gamma_converge_threshold=0.000001,
@@ -35,9 +35,7 @@ class VariationalBayes(object):
         
         self._global_maximum_iteration = global_maximum_iteration;
         #self._converge_threshold = converge_threshold
-        
-        self._truncate_beta = truncate_beta;
-        
+            
         self._gamma_title = "gamma-";
         self._beta_title = "beta-";
         
@@ -74,11 +72,13 @@ class VariationalBayes(object):
         self._gamma = numpy.tile(self._alpha + 1.0 * self._V / self._K, (self._D, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._log_beta = 1.0 / self._V + numpy.random.random((self._V, self._K));
-        self._log_beta = self._log_beta / numpy.sum(self._log_beta, axis=0)[numpy.newaxis, :];
-        self._log_beta = numpy.log(self._log_beta);
+        #self._E_log_beta = 1.0 / self._V + numpy.random.random((self._V, self._K));
+        self._E_log_beta = 1 * numpy.random.gamma(100., 1. / 100., (self._V, self._K));
+        self._E_log_beta = scipy.special.psi(self._E_log_beta) - scipy.special.psi(numpy.sum(self._E_log_beta, 0))[numpy.newaxis, :];
+        #self._E_log_beta = self._E_log_beta / numpy.sum(self._E_log_beta, axis=0)[numpy.newaxis, :];
+        #self._E_log_beta = numpy.log(self._E_log_beta);
         
-        self._eta = 0.0001 / self._K;
+        self._eta = 0.001 / self._K;
 
     """
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id
@@ -147,7 +147,7 @@ class VariationalBayes(object):
         if top_words >= self._V:
             sorted_beta = numpy.zeros((1, self._K)) - numpy.log(self._V);
         else:
-            sorted_beta = numpy.sort(self._log_beta, axis=0);
+            sorted_beta = numpy.sort(self._E_log_beta, axis=0);
             sorted_beta = sorted_beta[-top_words, :][numpy.newaxis, :];
 
         #print sorted_beta;
@@ -155,7 +155,7 @@ class VariationalBayes(object):
         #display = self._log_beta > -numpy.log(self._V);
         #assert(display.shape==(self._V, self._K));
         for k in xrange(self._K):
-            display = self._log_beta[:, [k]] >= sorted_beta[:, k];
+            display = self._E_log_beta[:, [k]] >= sorted_beta[:, k];
             assert(display.shape == (self._V, 1));
             output_str = str(k) + ": ";
             for v in xrange(self._V):
