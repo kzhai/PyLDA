@@ -240,12 +240,4 @@ class CollapsedGibbsSampling:
         output.close();
         
 if __name__ == "__main__":
-    temp_directory = "../data/ap/";
-    from util.input_parser import import_monolingual_data;
-    doc_id = import_monolingual_data(temp_directory+"doc_id.dat");
-    
-    lda = CollapsedGibbsSampling()
-    lda._initialize(doc_id, 10)
-
-    lda.sample()
-    lda.print_topics(2)
+    return;

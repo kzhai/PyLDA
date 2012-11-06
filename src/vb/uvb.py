@@ -230,21 +230,4 @@ class UncollapsedVariationalBayes():
         output.close();
         
 if __name__ == "__main__":
-    temp_directory = "../../data/de-news/en/corpus-2/";
-    number_of_topics = 5;
-    number_of_iterations = 20;
-    
-    import sys
-    if (len(sys.argv) > 1):
-        temp_directory = sys.argv[1];
-        number_of_topics = int(sys.argv[2]);
-        number_of_iterations = int(sys.argv[3]);
-        
-    from util.input_parser import import_monolingual_data;
-    d = import_monolingual_data(temp_directory + "doc.dat");
-
-    lda = UncollapsedVariationalBayes(5, False);
-    lda._initialize(d, number_of_topics);
-    lda.learning(number_of_iterations);
-    print lda._E_log_beta
-    lda.print_topics(temp_directory + "voc.dat", 5);
+    return;
