@@ -26,7 +26,7 @@ def parse_data(documents_file, vocabulary_file=None):
     input_file = codecs.open(documents_file, mode="r", encoding="utf-8")
 
     doc_count = 0
-    documents = []
+    documents = [];
     #documents = {};
     
     for line in input_file:
@@ -34,7 +34,7 @@ def parse_data(documents_file, vocabulary_file=None):
 
         contents = line.split("\t");
 
-        document = nltk.probability.FreqDist();
+        document = [];
         for token in contents[-1].split():
             if token not in type_to_index:
                 if vocabulary_file==None:
@@ -43,13 +43,11 @@ def parse_data(documents_file, vocabulary_file=None):
                 else:
                     continue;
                     
-            document.inc(type_to_index[token]);
-            #document.append(type_to_index[token]);
+            document.append(type_to_index[token]);
         
         assert len(document)>0, "document %d collapsed..." % doc_count;
         
-        documents.append(FreqDist(document));
-        
+        documents.append(document);
         #if len(contents)==2:
             #documents[int(contents[0])] = document;
         #elif len(contents)==1:
@@ -65,6 +63,7 @@ def parse_data(documents_file, vocabulary_file=None):
 
     print "successfully import", len(documents), "documents..."
     return documents, type_to_index, index_to_type;
+
 
 def main():
     import option_parser;
@@ -110,7 +109,7 @@ def main():
     # create output directory
     now = datetime.datetime.now();
     output_directory += now.strftime("%y%b%d-%H%M%S")+"";
-    output_directory += "-uvb-K%d-I%d-a%g-e%g-S%d/" \
+    output_directory += "-hybrid-K%d-I%d-a%g-e%g-S%d/" \
                         % (number_of_topics,
                            number_of_iterations,
                            alpha,
@@ -161,8 +160,8 @@ def main():
     documents, type_to_index, index_to_type = parse_data(input_directory+'doc.dat', input_directory+'voc.dat');
     print "successfully load all training documents..."
 
-    import uvb;
-    lda_inference = uvb.UncollapsedVariationalBayes();
+    import hybrid;
+    lda_inference = hybrid.Hybrid();
     lda_inference._initialize(documents, type_to_index, index_to_type, number_of_topics, alpha, eta);
     
     for iteration in xrange(number_of_iterations):

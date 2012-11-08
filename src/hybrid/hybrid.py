@@ -1,5 +1,5 @@
 """
-UncollapsedVariationalBayes for Vanilla LDA
+Hybrid Update for Vanilla LDA
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
 
@@ -9,22 +9,23 @@ import scipy
 import nltk;
 
 """
-This is a python implementation of vanilla lda, based on variational inference, with hyper parameter updating.
+This is a python implementation of vanilla lda, based on a hybrid approach of variational inference and gibbs sampling, with hyper parameter updating.
 It supports asymmetric Dirichlet prior over the topic simplex.
 
 References:
-[1] D. Blei, A. Ng, and M. Jordan. Latent Dirichlet Allocation. Journal of Machine Learning Research, 3:993-1022, January 2003.
+[1] D. Mimno, M. Hoffman, D. Blei. Sparse Stochastic Inference for Latent Dirichlet Allocation. Internal Conference on Machine Learning, Jun 2012.
 """
-class UncollapsedVariationalBayes():
+class Hybrid():
     """
     """
     def __init__(self,
                  alpha_update_decay_factor=0.9,
                  alpha_maximum_decay=10,
-                 gamma_converge_threshold=0.000001,
-                 gamma_maximum_iteration=100,
                  alpha_converge_threshold=0.000001,
                  alpha_maximum_iteration=100,
+                 #gamma_converge_threshold=0.000001,
+                 number_of_samples=10,
+                 burn_in_samples=5,
                  model_likelihood_threshold=0.00001
                  ):
         self._alpha_update_decay_factor = alpha_update_decay_factor;
@@ -32,10 +33,9 @@ class UncollapsedVariationalBayes():
         self._alpha_converge_threshold = alpha_converge_threshold;
         self._alpha_maximum_iteration = alpha_maximum_iteration;
         
-        self._gamma_maximum_iteration = gamma_maximum_iteration;
-        self._gamma_converge_threshold = gamma_converge_threshold;
-
-        #self._model_likelihood_threshold = model_likelihood_threshold;
+        #self._gamma_converge_threshold = gamma_converge_threshold;
+        self._number_of_samples = number_of_samples;
+        self._burn_in_samples = burn_in_samples;
 
     """
     @param num_topics: the number of topics
@@ -66,11 +66,11 @@ class UncollapsedVariationalBayes():
         self._number_of_terms = len(self._type_to_index)
                 
         # initialize a D-by-K matrix gamma, valued at N_d/K
-        self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha + 1.0 * self._number_of_terms / self._number_of_topics;
-        #self._gamma = numpy.tile(self._alpha + 1.0 * self._number_of_terms / self._number_of_topics, (self._number_of_documents, 1));
+        #self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha + 1.0 * self._number_of_terms / self._number_of_topics;
+        self._gamma = numpy.tile(self._alpha + 1.0 * self._number_of_terms / self._number_of_topics, (self._number_of_documents, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._E_log_beta = self.compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_terms)));
+        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_terms))));
 
     def compute_dirichlet_expectation(self, dirichlet_parameter):
         if (len(dirichlet_parameter.shape) == 1):
@@ -78,52 +78,60 @@ class UncollapsedVariationalBayes():
         return scipy.special.psi(dirichlet_parameter) - scipy.special.psi(numpy.sum(dirichlet_parameter, 1))[:, numpy.newaxis]
     
     def e_step(self):
-        likelihood_phi = 0.0;
-
         # initialize a V-by-K matrix phi contribution
-        phi_sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_terms));
+        sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_terms));
         
+        # Initialize the variational distribution q(theta|gamma) for the mini-batch
+        #batch_document_topic_distribution = numpy.zeros((batchD, self._number_of_topics));
+
         # iterate over all documents
-        for doc_id in xrange(self._number_of_documents):
-            # compute the total number of words
-            total_word_count = self._data[doc_id].N()
+        for d in xrange(self._number_of_documents):
+            phi = numpy.random.random((self._number_of_topics, len(self._data[d])));
+            phi = phi / numpy.sum(phi, axis=0)[numpy.newaxis, :];
+            phi_sum = numpy.sum(phi, axis=1)[:, numpy.newaxis];
+            assert(phi_sum.shape == (self._number_of_topics, 1));
 
-            # initialize gamma for this document
-            self._gamma[[doc_id], :] = self._alpha + 1.0 * total_word_count / self._number_of_topics;
-            
-            term_ids = numpy.array(self._data[doc_id].keys());
-            term_counts = numpy.array([self._data[doc_id].values()]);
-            assert(term_counts.shape == (1, len(term_ids)));
+            # collect phi samples from empirical distribution
+            for it in xrange(self._number_of_samples):
+                for n in xrange(len(self._data[d])):
+                    id = self._data[d][n];
+                    
+                    phi_sum -= phi[:, n][:, numpy.newaxis];
+                    
+                    # this is to get rid of the underflow error from the above summation, ideally, phi will become all integers after few iterations
+                    phi_sum *= phi_sum > 0;
+                    #assert(numpy.all(phi_sum >= 0));
 
-            # update phi and gamma until gamma converges
-            for gamma_iteration in xrange(self._gamma_maximum_iteration):
-                assert self._E_log_beta.shape==(self._number_of_topics, self._number_of_terms);
-                log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (len(self._data[doc_id]), 1));
-                assert log_phi.shape==(len(term_ids), self._number_of_topics);
-                phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
-                assert(phi_normalizer.shape == (len(term_ids), 1));
-                log_phi -= phi_normalizer;
-                assert(log_phi.shape == (len(term_ids), self._number_of_topics));
-                
-                gamma_update = self._alpha + numpy.array(numpy.sum(numpy.exp(log_phi + numpy.log(term_counts.transpose())), axis=0));
-                
-                mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
-                self._gamma[[doc_id], :] = gamma_update;
-                if mean_change <= self._gamma_converge_threshold:
-                    break;
-                
-            likelihood_phi += numpy.sum(numpy.exp(log_phi) * ((self._E_log_beta[:, term_ids].T * term_counts.transpose()) - log_phi));
-            assert(log_phi.shape == (len(term_ids), self._number_of_topics));
-            phi_sufficient_statistics[:, term_ids] += numpy.exp(log_phi.T);
-        
-            if (doc_id+1) % 1000==0:
-                print "successfully processed %d documents..." % (doc_id+1);
+                    temp_phi = (phi_sum.T + self._alpha) * self._exp_E_log_beta[:, [id]].T;
+                    assert(temp_phi.shape == (1, self._number_of_topics));
+                    temp_phi /= numpy.sum(temp_phi);
+
+                    # sample a topic for this word
+                    temp_phi = numpy.random.multinomial(1, temp_phi[0])[:, numpy.newaxis];
+                    assert(temp_phi.shape == (self._number_of_topics, 1));
+                    
+                    phi[:, n][:, numpy.newaxis] = temp_phi;
+                    phi_sum += temp_phi;
+
+                    # discard the first few burn-in sweeps
+                    if it < self._burn_in_samples:
+                        continue;
+                    
+                    sufficient_statistics[:, id] += temp_phi[:, 0];
+
+            self._gamma[d, :] = self._alpha + phi_sum.T[0, :];
+            #batch_document_topic_distribution[d, :] = self._alpha + phi_sum.T[0, :];
             
-        return phi_sufficient_statistics, likelihood_phi
+            if (d+1) % 1000==0:
+                print "successfully processed %d documents..." % (d+1);
+
+        sufficient_statistics /= (self._number_of_samples - self._burn_in_samples);
+
+        return sufficient_statistics
 
     def m_step(self, phi_sufficient_statistics):
-        self._E_log_beta = self.compute_dirichlet_expectation(phi_sufficient_statistics+self._eta);
-        assert(self._E_log_beta.shape == (self._number_of_topics, self._number_of_terms));
+        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(phi_sufficient_statistics+self._eta));
+        assert(self._exp_E_log_beta.shape == (self._number_of_topics, self._number_of_terms));
         
         # compute the sufficient statistics for alpha and update
         alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
@@ -136,10 +144,10 @@ class UncollapsedVariationalBayes():
         self._counter += 1;
         
         clock_e_step = time.time();        
-        phi_sufficient_statistics, likelihood_phi = self.e_step();
+        phi_sufficient_statistics = self.e_step();
         clock_e_step = time.time() - clock_e_step;
         
-        clock_m_step = time.time();        
+        clock_m_step = time.time();
         self.m_step(phi_sufficient_statistics);
         clock_m_step = time.time() - clock_m_step;
                 
@@ -152,16 +160,16 @@ class UncollapsedVariationalBayes():
         likelihood_gamma = numpy.sum(scipy.special.gammaln(self._gamma));
         likelihood_gamma -= numpy.sum(scipy.special.gammaln(numpy.sum(self._gamma, axis=1)));
 
-        new_likelihood = likelihood_alpha + likelihood_gamma + likelihood_phi;
+        #new_likelihood = likelihood_alpha + likelihood_gamma + likelihood_phi;
         
-        print "e_step and m_step of iteration %d finished in %d and %d seconds respectively with log likelihood %g" % (self._counter, clock_e_step, clock_m_step, new_likelihood)
+        print "e_step and m_step of iteration %d finished in %d and %d seconds respectively" % (self._counter, clock_e_step, clock_m_step)
         
         #if abs((new_likelihood - old_likelihood) / old_likelihood) < self._model_likelihood_threshold:
             #print "model likelihood converged..."
             #break
         #old_likelihood = new_likelihood;
         
-        return new_likelihood
+        return
 
     """
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id
@@ -222,7 +230,7 @@ class UncollapsedVariationalBayes():
 
             freqdist = nltk.probability.FreqDist();
             for index in self._index_to_type:
-                freqdist.inc(self._index_to_type[index], numpy.exp(self._E_log_beta[k, index]));
+                freqdist.inc(self._index_to_type[index], self._exp_E_log_beta[k, index]);
                 
             for key in freqdist.keys():
                 output.write("%s\t%g\n" % (key, freqdist[key]));
