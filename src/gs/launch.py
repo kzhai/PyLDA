@@ -109,7 +109,7 @@ def main():
     now = datetime.datetime.now();
     output_directory += now.strftime("%y%b%d-%H%M%S")+"";
     #output_directory += "-" + str(now.microsecond) + "/";
-    output_directory += "-K%d-I%d-a%g-b%g-S%d/" \
+    output_directory += "-cgs-K%d-I%d-a%g-b%g-S%d/" \
                         % (number_of_topics,
                            number_of_iterations,
                            alpha,

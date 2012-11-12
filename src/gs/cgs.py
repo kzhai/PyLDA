@@ -240,4 +240,4 @@ class CollapsedGibbsSampling:
         output.close();
         
 if __name__ == "__main__":
-    return;
+    print "not implemented"
