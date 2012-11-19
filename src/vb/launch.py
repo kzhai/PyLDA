@@ -103,10 +103,14 @@ def main():
     input_directory += corpus_name+'/';
         
     output_directory = options.output_directory;
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory);
     if not output_directory.endswith('/'):
         output_directory += '/';
     output_directory += corpus_name+'/';
-     
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory);
+             
     # create output directory
     now = datetime.datetime.now();
     output_directory += now.strftime("%y%b%d-%H%M%S")+"";
