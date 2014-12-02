@@ -6,65 +6,6 @@ import scipy.io;
 import nltk;
 import numpy;
 
-from nltk.corpus import stopwords;
-from nltk.probability import FreqDist;
-
-def parse_data(documents_file, vocabulary_file=None):
-    import codecs
-    
-    type_to_index = {};
-    index_to_type = {};
-    if (vocabulary_file!=None):
-        input_file = codecs.open(vocabulary_file, mode='r', encoding='utf-8');
-        for line in input_file:
-            line = line.strip().split()[0];
-            assert line not in type_to_index, "duplicate type for %s" % line;
-            type_to_index[line] = len(type_to_index);
-            index_to_type[len(index_to_type)] = line;
-        input_file.close();
-
-    input_file = codecs.open(documents_file, mode="r", encoding="utf-8")
-
-    doc_count = 0
-    documents = [];
-    #documents = {};
-    
-    for line in input_file:
-        line = line.strip().lower();
-
-        contents = line.split("\t");
-
-        document = [];
-        for token in contents[-1].split():
-            if token not in type_to_index:
-                if vocabulary_file==None:
-                    type_to_index[token] = len(type_to_index);
-                    index_to_type[len(index_to_type)] = token;
-                else:
-                    continue;
-                    
-            document.append(type_to_index[token]);
-        
-        assert len(document)>0, "document %d collapsed..." % doc_count;
-        
-        documents.append(document);
-        #if len(contents)==2:
-            #documents[int(contents[0])] = document;
-        #elif len(contents)==1:
-            #documents[doc_count] = document;
-        #else:
-            #print ""
-
-        doc_count+=1
-        if doc_count%10000==0:
-            print "successfully import %d documents..." % doc_count;
-    
-    input_file.close();
-
-    print "successfully import", len(documents), "documents..."
-    return documents, type_to_index, index_to_type;
-
-
 def main():
     import option_parser;
     options = option_parser.parse_args();
@@ -76,11 +17,11 @@ def main():
     number_of_iterations = options.number_of_iterations;
 
     # parameter set 3
-    alpha = 1.0/number_of_topics;
+    alpha_alpha = 1.0/number_of_topics;
     if options.alpha>0:
-        alpha=options.alpha;
+        alpha_alpha=options.alpha;
     assert(options.eta>0);
-    eta = options.eta;
+    alpha_eta = options.eta;
     
     # parameter set 4
     #disable_alpha_theta_update = options.disable_alpha_theta_update;
@@ -90,34 +31,37 @@ def main():
         snapshot_interval=options.snapshot_interval;
     
     # parameter set 1
-    assert(options.corpus_name!=None);
+    #assert(options.corpus_name!=None);
     assert(options.input_directory!=None);
     assert(options.output_directory!=None);
-
-    corpus_name = options.corpus_name;
-
+    
     input_directory = options.input_directory;
-    if not input_directory.endswith('/'):
-        input_directory += '/';
-    input_directory += corpus_name+'/';
-        
+    input_directory = input_directory.rstrip("/");
+    corpus_name = os.path.basename(input_directory);
+    
     output_directory = options.output_directory;
-    if not output_directory.endswith('/'):
-        output_directory += '/';
-    output_directory += corpus_name+'/';
-     
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory);
+    output_directory = os.path.join(output_directory, corpus_name);
+    if not os.path.exists(output_directory):
+        os.mkdir(output_directory);
+
     # create output directory
     now = datetime.datetime.now();
-    output_directory += now.strftime("%y%b%d-%H%M%S")+"";
-    output_directory += "-hybrid-K%d-I%d-a%g-e%g-S%d/" \
-                        % (number_of_topics,
-                           number_of_iterations,
-                           alpha,
-                           eta,
-                           snapshot_interval);
-
-    os.mkdir(os.path.abspath(output_directory));
+    suffix = now.strftime("%y%b%d-%H%M%S") + "";
+    suffix += "-%s" % ("lda");
+    suffix += "-I%d" % (number_of_iterations);
+    suffix += "-S%d" % (snapshot_interval);
+    suffix += "-K%d" % (number_of_topics);
+    suffix += "-aa%f" % (alpha_alpha);
+    suffix += "-ae%f" % (alpha_eta);
+    # suffix += "-%s" % (resample_topics);
+    # suffix += "-%s" % (hash_oov_words);
+    suffix += "/";
     
+    output_directory = os.path.join(output_directory, suffix);
+    os.mkdir(os.path.abspath(output_directory));
+
     #dict_file = options.dictionary;
     #if dict_file != None:
         #dict_file = dict_file.strip();
@@ -132,8 +76,8 @@ def main():
     options_output_file.write("number_of_iteration=%d\n" % (number_of_iterations));
     options_output_file.write("number_of_topics=" + str(number_of_topics) + "\n");
     # parameter set 3
-    options_output_file.write("alpha=" + str(alpha) + "\n");
-    options_output_file.write("eta=" + str(eta) + "\n");
+    options_output_file.write("alpha_alpha=" + str(alpha_alpha) + "\n");
+    options_output_file.write("alpha_eta=" + str(alpha_eta) + "\n");
     # parameter set 4
     #options_output_file.write("inference_type=%s\n" % (inference_type));
     options_output_file.write("snapshot_interval=" + str(snapshot_interval) + "\n");
@@ -150,19 +94,32 @@ def main():
     print "number_of_iterations=%d" %(number_of_iterations);
     print "number_of_topics=" + str(number_of_topics)
     # parameter set 3
-    print "alpha=" + str(alpha)
-    print "eta=" + str(eta)
+    print "alpha_alpha=" + str(alpha_alpha)
+    print "alpha_eta=" + str(alpha_eta)
     # parameter set 4
     #print "inference_type=%s" % (inference_type)
     print "snapshot_interval=" + str(snapshot_interval);
     print "========== ========== ========== ========== =========="
 
-    documents, type_to_index, index_to_type = parse_data(input_directory+'doc.dat', input_directory+'voc.dat');
-    print "successfully load all training documents..."
-
+    # Document
+    train_docs = [];
+    input_doc_stream = open(os.path.join(input_directory, 'doc.dat'), 'r');
+    for line in input_doc_stream:
+        train_docs.append(line.strip().lower());
+    print "successfully load all training train_docs..."
+    
+    # Vocabulary
+    dictionary_file = os.path.join(input_directory, 'voc.dat');
+    input_voc_stream = open(dictionary_file, 'r');
+    vocab = [];
+    for line in input_voc_stream:
+        vocab.append(line.strip().lower().split()[0]);
+    vocab = list(set(vocab));
+    print "successfully load all the words from %s..." % (dictionary_file);
+    
     import hybrid;
     lda_inference = hybrid.Hybrid();
-    lda_inference._initialize(documents, type_to_index, index_to_type, number_of_topics, alpha, eta);
+    lda_inference._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_eta);
     
     for iteration in xrange(number_of_iterations):
         lda_inference.learn();

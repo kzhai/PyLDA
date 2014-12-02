@@ -38,23 +38,26 @@ class Hybrid():
         self._burn_in_samples = burn_in_samples;
 
     """
-    @param num_topics: the number of topics
-    @param data: a defaultdict(dict) data type, first indexed by doc id then indexed by term id
-    take note: words are not terms, they are repeatable and thus might be not unique
     """
-    def _initialize(self, data, type_to_index, index_to_type, number_of_topics, alpha, eta):
+    def _initialize(self, data, vocab, number_of_topics, alpha_alpha, alpha_eta):
         self._counter = 0;
         
-        self._type_to_index = type_to_index;
-        self._index_to_type = index_to_type;
+        self._type_to_index = {};
+        self._index_to_type = {};
+        for word in set(vocab):
+            self._index_to_type[len(self._index_to_type)] = word;
+            self._type_to_index[word] = len(self._type_to_index);
+            
+        self._vocabulary = self._type_to_index.keys();
+        self._vocabulary_size = len(self._vocabulary);
         
         # initialize the total number of topics.
         self._number_of_topics = number_of_topics
         
         # initialize a K-dimensional vector, valued at 1/K.
-        #self._alpha = numpy.random.random((1, self._number_of_topics)) / self._number_of_topics;
-        self._alpha = numpy.zeros((1, self._number_of_topics))+alpha;
-        self._eta = eta;
+        #self._alpha_alpha = numpy.random.random((1, self._number_of_topics)) / self._number_of_topics;
+        self._alpha_alpha = numpy.zeros((1, self._number_of_topics))+alpha_alpha;
+        self._alpha_eta = alpha_eta;
 
         # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
         self._data = data
@@ -63,23 +66,18 @@ class Hybrid():
         self._number_of_documents = len(self._data)
         
         # initialize the size of the vocabulary, i.e. total number of distinct tokens.
-        self._number_of_terms = len(self._type_to_index)
+        self._number_of_types = len(self._type_to_index)
                 
         # initialize a D-by-K matrix gamma, valued at N_d/K
-        #self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha + 1.0 * self._number_of_terms / self._number_of_topics;
-        self._gamma = numpy.tile(self._alpha + 1.0 * self._number_of_terms / self._number_of_topics, (self._number_of_documents, 1));
+        #self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics;
+        self._gamma = numpy.tile(self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics, (self._number_of_documents, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_terms))));
-
-    def compute_dirichlet_expectation(self, dirichlet_parameter):
-        if (len(dirichlet_parameter.shape) == 1):
-            return scipy.special.psi(dirichlet_parameter) - scipy.special.psi(numpy.sum(dirichlet_parameter))
-        return scipy.special.psi(dirichlet_parameter) - scipy.special.psi(numpy.sum(dirichlet_parameter, 1))[:, numpy.newaxis]
+        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
     
     def e_step(self):
         # initialize a V-by-K matrix phi contribution
-        sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_terms));
+        sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_types));
         
         # Initialize the variational distribution q(theta|gamma) for the mini-batch
         #batch_document_topic_distribution = numpy.zeros((batchD, self._number_of_topics));
@@ -102,7 +100,7 @@ class Hybrid():
                     phi_sum *= phi_sum > 0;
                     #assert(numpy.all(phi_sum >= 0));
 
-                    temp_phi = (phi_sum.T + self._alpha) * self._exp_E_log_beta[:, [id]].T;
+                    temp_phi = (phi_sum.T + self._alpha_alpha) * self._exp_E_log_beta[:, [id]].T;
                     assert(temp_phi.shape == (1, self._number_of_topics));
                     temp_phi /= numpy.sum(temp_phi);
 
@@ -119,8 +117,8 @@ class Hybrid():
                     
                     sufficient_statistics[:, id] += temp_phi[:, 0];
 
-            self._gamma[d, :] = self._alpha + phi_sum.T[0, :];
-            #batch_document_topic_distribution[d, :] = self._alpha + phi_sum.T[0, :];
+            self._gamma[d, :] = self._alpha_alpha + phi_sum.T[0, :];
+            #batch_document_topic_distribution[d, :] = self._alpha_alpha + phi_sum.T[0, :];
             
             if (d+1) % 1000==0:
                 print "successfully processed %d documents..." % (d+1);
@@ -130,8 +128,8 @@ class Hybrid():
         return sufficient_statistics
 
     def m_step(self, phi_sufficient_statistics):
-        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(phi_sufficient_statistics+self._eta));
-        assert(self._exp_E_log_beta.shape == (self._number_of_topics, self._number_of_terms));
+        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(phi_sufficient_statistics+self._alpha_eta));
+        assert(self._exp_E_log_beta.shape == (self._number_of_topics, self._number_of_types));
         
         # compute the sufficient statistics for alpha and update
         alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
@@ -152,8 +150,8 @@ class Hybrid():
         clock_m_step = time.time() - clock_m_step;
                 
         # compute the log-likelihood of alpha terms
-        alpha_sum = numpy.sum(self._alpha, axis=1);
-        likelihood_alpha = -numpy.sum(scipy.special.gammaln(self._alpha), axis=1);
+        alpha_sum = numpy.sum(self._alpha_alpha, axis=1);
+        likelihood_alpha = -numpy.sum(scipy.special.gammaln(self._alpha_alpha), axis=1);
         likelihood_alpha += scipy.special.gammaln(alpha_sum);
         likelihood_alpha *= self._number_of_documents;
         
@@ -177,13 +175,13 @@ class Hybrid():
     """
     def update_alpha(self, alpha_sufficient_statistics):
         assert(alpha_sufficient_statistics.shape == (1, self._number_of_topics));        
-        alpha_update = self._alpha;
+        alpha_update = self._alpha_alpha;
         
         decay = 0;
         for alpha_iteration in xrange(self._alpha_maximum_iteration):
-            alpha_sum = numpy.sum(self._alpha);
-            alpha_gradient = self._number_of_documents * (scipy.special.psi(alpha_sum) - scipy.special.psi(self._alpha)) + alpha_sufficient_statistics;
-            alpha_hessian = -self._number_of_documents * scipy.special.polygamma(1, self._alpha);
+            alpha_sum = numpy.sum(self._alpha_alpha);
+            alpha_gradient = self._number_of_documents * (scipy.special.psi(alpha_sum) - scipy.special.psi(self._alpha_alpha)) + alpha_sufficient_statistics;
+            alpha_hessian = -self._number_of_documents * scipy.special.polygamma(1, self._alpha_alpha);
 
             if numpy.any(numpy.isinf(alpha_gradient)) or numpy.any(numpy.isnan(alpha_gradient)):
                 print "illegal alpha gradient vector", alpha_gradient
@@ -200,12 +198,12 @@ class Hybrid():
 
                 step_size = numpy.power(self._alpha_update_decay_factor, decay) * (alpha_gradient - c) / alpha_hessian;
                 #print "step size is", step_size
-                assert(self._alpha.shape == step_size.shape);
+                assert(self._alpha_alpha.shape == step_size.shape);
                 
-                if numpy.any(self._alpha <= step_size):
+                if numpy.any(self._alpha_alpha <= step_size):
                     singular_hessian = True
                 else:
-                    alpha_update = self._alpha - step_size;
+                    alpha_update = self._alpha_alpha - step_size;
                 
                 if singular_hessian:
                     decay += 1;
@@ -216,8 +214,8 @@ class Hybrid():
                 
             # compute the alpha sum
             # check the alpha converge criteria
-            mean_change = numpy.mean(abs(alpha_update - self._alpha));
-            self._alpha = alpha_update;
+            mean_change = numpy.mean(abs(alpha_update - self._alpha_alpha));
+            self._alpha_alpha = alpha_update;
             if mean_change <= self._alpha_converge_threshold:
                 break;
 
