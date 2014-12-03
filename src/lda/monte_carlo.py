@@ -23,22 +23,20 @@ class MonteCarlo(Inferencer):
     """
     """
     def __init__(self,
-                 #snapshot_interval=10,
-                 local_maximum_iteration=5, 
-                 alpha_maximum_iteration=50,
-                 hyper_parameter_sampling_interval=20):
+                hyper_parameter_optimize_interval=10,
+                 local_maximum_iteration=1, 
 
-        #self._snapshot_iterval = snapshot_interval;
+                 hyper_parameter_iteration=50,):
 
-        self._alpha_maximum_iteration = alpha_maximum_iteration
-        assert(self._alpha_maximum_iteration>0)
+        self._hyper_parameter_iteration = hyper_parameter_iteration
+        assert(self._hyper_parameter_iteration>0)
+        
+        self._hyper_parameter_optimize_interval = hyper_parameter_optimize_interval;
+        assert(self._hyper_parameter_optimize_interval>0);
         
         self._local_maximum_iteration = local_maximum_iteration
         assert(self._local_maximum_iteration>0)
 
-        self._hyper_parameter_sampling_interval = hyper_parameter_sampling_interval;
-        assert(self._hyper_parameter_sampling_interval>0);
-        
     """
     @param num_topics: desired number of topics
     @param data: a dict data type, indexed by document id, value is a list of words in that document, not necessarily be unique
@@ -56,10 +54,9 @@ class MonteCarlo(Inferencer):
         self._n_dk = numpy.zeros((self._number_of_documents, self._number_of_topics));
         # define the counts over words for all topics, first indexed by topic id, then indexed by token id
         self._n_kv = numpy.zeros((self._number_of_topics, self._number_of_types));
+        self._n_k = numpy.zeros(self._number_of_topics);
         # define the topic assignment for every word in every document, first indexed by doc_id id, then indexed by word word_pos
         self._k_dn = {};
-        
-        self._alpha_sum = numpy.sum(self._alpha_alpha);
         
         self.random_initialize();
 
@@ -74,6 +71,7 @@ class MonteCarlo(Inferencer):
                 self._k_dn[doc_id][word_pos] = topic_index;
                 self._n_dk[doc_id, topic_index] += 1;
                 self._n_kv[topic_index, type_index] += 1;
+                self._n_k[topic_index] += 1;
         
     def parse_data(self):
         doc_count = 0
@@ -103,24 +101,24 @@ class MonteCarlo(Inferencer):
         old_hyper_parameters = [math.log(self._alpha_alpha), math.log(self._alpha_beta)]
 
         for ii in xrange(samples):
-            log_likelihood_old = self.compute_likelihood(self._alpha_alpha, self._alpha_beta)
+            log_likelihood_old = self.log_posterior(self._alpha_alpha, self._alpha_beta)
             log_likelihood_new = math.log(random.random()) + log_likelihood_old
             #print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha_alpha, self._alpha_beta))
 
             l = [x - random.random() * step for x in old_hyper_parameters]
             r = [x + step for x in old_hyper_parameters]
 
-            for jj in xrange(self._alpha_maximum_iteration):
+            for jj in xrange(self._hyper_parameter_iteration):
                 new_hyper_parameters = [l[x] + random.random() * (r[x] - l[x]) for x in xrange(len(old_hyper_parameters))]
                 trial_alpha, trial_beta = [math.exp(x) for x in new_hyper_parameters]
-                lp_test = self.compute_likelihood(trial_alpha, trial_beta)
+                lp_test = self.log_posterior(trial_alpha, trial_beta)
 
                 if lp_test > log_likelihood_new:
                     #print(jj)
                     self._alpha_alpha = math.exp(new_hyper_parameters[0])
                     self._alpha_beta = math.exp(new_hyper_parameters[1])
-                    self._alpha_sum = self._alpha_alpha * self._number_of_topics
-                    self._beta_sum = self._alpha_beta * self._number_of_types
+                    #self._alpha_sum = self._alpha_alpha * self._number_of_topics
+                    #self._beta_sum = self._alpha_beta * self._number_of_types
                     old_hyper_parameters = [math.log(self._alpha_alpha), math.log(self._alpha_beta)]
                     break
                 else:
@@ -137,49 +135,46 @@ class MonteCarlo(Inferencer):
     """
     compute the log-likelihood of the model
     """
-    def compute_likelihood(self, alpha, beta):
+    def log_posterior(self, alpha, beta):
         assert self._n_dk.shape==(self._number_of_documents, self._number_of_topics);
+        assert alpha.shape==(self._number_of_topics,);
+        assert beta.shape==(self._number_of_types,);
         
-        alpha_sum = alpha * self._number_of_topics
-        beta_sum = beta * self._number_of_types
-
-        likelihood = 0.0
-        # compute the log likelihood of the document
-        likelihood += scipy.special.gammaln(alpha_sum) * self._number_of_documents
-        likelihood -= scipy.special.gammaln(alpha) * self._number_of_topics * self._number_of_documents
-           
+        alpha_sum = numpy.sum(alpha);
+        beta_sum = numpy.sum(beta);
+        
+        log_likelihood = 0.0
+        # compute the log log_likelihood of the document
+        log_likelihood += scipy.special.gammaln(numpy.sum(alpha)) * self._number_of_documents
+        log_likelihood -= numpy.sum(scipy.special.gammaln(alpha)) * self._number_of_documents
+        
+        for doc_id in xrange(self._number_of_documents):
+            log_likelihood += numpy.sum(scipy.special.gammaln(self._n_dk[doc_id, :] + alpha));
+            log_likelihood -= scipy.special.gammaln(numpy.sum(self._n_dk[doc_id, :]) + alpha_sum);
+        
+        '''
         for ii in self._n_dk.keys():
             for jj in xrange(self._number_of_topics):
-                likelihood += scipy.special.gammaln(alpha + self._n_dk[ii][jj])                    
-            likelihood -= scipy.special.gammaln(alpha_sum + self._n_dk[ii].N())
-            
-        # compute the log likelihood of the topic
-        likelihood += scipy.special.gammaln(beta_sum) * self._number_of_topics
-        likelihood -= scipy.special.gammaln(beta) * self._number_of_types * self._number_of_topics
+                log_likelihood += scipy.special.gammaln(alpha + self._n_dk[ii][jj])                    
+            log_likelihood -= scipy.special.gammaln(alpha_sum + self._n_dk[ii].N())
+        '''
+        
+        # compute the log log_likelihood of the topic
+        log_likelihood += scipy.special.gammaln(numpy.sum(beta)) * self._number_of_topics;
+        log_likelihood -= numpy.sum(scipy.special.gammaln(beta)) * self._number_of_topics;
 
+        for topic_id in xrange(self._number_of_topics):
+            log_likelihood += numpy.sum(scipy.special.gammaln(self._n_kv[topic_id, :] + beta));
+            log_likelihood -= scipy.special.gammaln(self._n_k[topic_id] + beta_sum);
+        
+        '''
         for ii in self._n_kv.keys():
             for jj in self._type_to_index:
-                likelihood += scipy.special.gammaln(beta + self._n_kv[ii][jj])
-            likelihood -= scipy.special.gammaln(beta_sum + self._n_kv[ii].N())
-
-        return likelihood
-
-    """
-    compute the conditional distribution
-    @param doc_id: doc_id id
-    @param word: word id
-    @param topic: topic id  
-    @return: the probability value of the topic for that word in that document
-    """
-    def log_prob(self, doc_id, word, topic):
-        val = math.log(self._n_dk[doc_id][topic] + self._alpha_alpha)
-        #this is constant across a document, so we don't need to compute this term
-        # val -= math.log(self._n_dk[doc_id].N() + self._alpha_sum)
+                log_likelihood += scipy.special.gammaln(beta + self._n_kv[ii][jj])
+            log_likelihood -= scipy.special.gammaln(beta_sum + self._n_kv[ii].N())
+        '''
         
-        val += math.log(self._n_kv[topic][word] + self._alpha_beta)
-        val -= math.log(self._n_kv[topic].N() + self._number_of_types * self._alpha_beta)
-    
-        return val
+        return log_likelihood
 
     """
     this method samples the word at position in document, by covering that word and compute its new topic distribution, in the end, both self._k_dn, self._n_dk and self._n_kv will change
@@ -199,9 +194,13 @@ class MonteCarlo(Inferencer):
                 #this word_id already has a valid topic assignment, decrease the topic|doc_id counts and word_id|topic counts by covering up that word_id
                 self._n_dk[doc_id, old_topic] -= 1
                 self._n_kv[old_topic, word_id] -= 1;
+                self._n_k[old_topic] -= 1;
     
             #compute the topic probability of current word_id, given the topic assignment for other words
-            log_probability = [self.log_prob(doc_id, self._word_idss[doc_id][position], x) for x in xrange(self._number_of_topics)]
+            log_probability = numpy.log(self._n_dk[doc_id, :] + self._alpha_alpha); 
+            log_probability += numpy.log(self._n_kv[:, word_id] + self._alpha_beta[word_id]);
+            log_probability -= numpy.log(self._n_k + numpy.sum(self._alpha_beta));
+
             log_probability -= scipy.misc.logsumexp(log_probability)
             
             #sample a new topic out of a distribution according to log_probability
@@ -212,6 +211,7 @@ class MonteCarlo(Inferencer):
             #after we draw a new topic for that word_id, we will change the topic|doc_id counts and word_id|topic counts, i.e., add the counts back
             self._n_dk[doc_id, new_topic] += 1
             self._n_kv[new_topic, word_id] += 1;
+            self._n_k[new_topic] += 1;
             #assign the topic for the word_id of current document at current position
             self._k_dn[doc_id][position] = new_topic
 
@@ -234,11 +234,11 @@ class MonteCarlo(Inferencer):
             if (doc_id+1) % 1000==0:
                 print "successfully sampled %d documents" % (doc_id+1)
 
-        if self._counter % self._hyper_parameter_sampling_interval == 0:
+        if self._counter % self._hyper_parameter_optimize_interval == 0:
             self.optimize_hyperparameters()
 
         processing_time = time.time() - processing_time;                
-        print("iteration %i finished in %d seconds with log-likelihood %g" % (self._counter, processing_time, self.compute_likelihood(self._alpha_alpha, self._alpha_beta)))
+        print("iteration %i finished in %d seconds with log-likelihood %g" % (self._counter, processing_time, self.log_posterior(self._alpha_alpha, self._alpha_beta)))
 
     def export_beta(self, exp_beta_path, top_display=-1):
         output = open(exp_beta_path, 'w');
