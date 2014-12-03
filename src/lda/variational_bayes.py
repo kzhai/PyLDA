@@ -54,19 +54,20 @@ class VariationalBayes(Inferencer):
     """
     def __init__(self,
                  hyper_parameter_optimize_interval=1,
-                 hyper_parameter_iteration=100,
                  
-                 hyper_parameter_decay_factor=0.9,
-                 hyper_parameter_maximum_decay=10,
-                 hyper_parameter_converge_threshold=1e-6,
+                 #hyper_parameter_iteration=100,
+                 #hyper_parameter_decay_factor=0.9,
+                 #hyper_parameter_maximum_decay=10,
+                 #hyper_parameter_converge_threshold=1e-6,
                  
                  #model_converge_threshold=1e-6
                  ):
-        Inferencer.__init__(self, hyper_parameter_optimize_interval, hyper_parameter_iteration);
+        Inferencer.__init__(self, hyper_parameter_optimize_interval);
         
-        self._hyper_parameter_update_decay_factor = hyper_parameter_decay_factor;
-        self._hyper_parameter_maximum_decay = hyper_parameter_maximum_decay;
-        self._hyper_parameter_converge_threshold = hyper_parameter_converge_threshold;
+        #self._hyper_parameter_iteration = hyper_parameter_iteration
+        #self._hyper_parameter_decay_factor = hyper_parameter_decay_factor;
+        #self._hyper_parameter_maximum_decay = hyper_parameter_maximum_decay;
+        #self._hyper_parameter_converge_threshold = hyper_parameter_converge_threshold;
         
         #self._model_converge_threshold = model_converge_threshold;
 
@@ -173,6 +174,8 @@ class VariationalBayes(Inferencer):
         # compute the sufficient statistics for alpha and update
         alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
         alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0);#[numpy.newaxis, :];
+        
+        return alpha_sufficient_statistics
 
     """
     """
@@ -186,7 +189,7 @@ class VariationalBayes(Inferencer):
         clock_m_step = time.time();        
         alpha_sufficient_statistics = self.m_step(phi_sufficient_statistics);
         if self._hyper_parameter_optimize_interval>0 and self._counter%self._hyper_parameter_optimize_interval==0:
-            self.update_alpha(alpha_sufficient_statistics);
+            self.optimize_hyperparameters(alpha_sufficient_statistics);
         clock_m_step = time.time() - clock_m_step;
                 
         # compute the log-likelihood of alpha terms
@@ -213,13 +216,13 @@ class VariationalBayes(Inferencer):
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id
     @param alpha_sufficient_statistics: a dict data type represents alpha sufficient statistics for alpha updating, indexed by topic_id
     """
-    def update_alpha(self, alpha_sufficient_statistics):
+    def optimize_hyperparameters(self, alpha_sufficient_statistics, hyper_parameter_iteration=100, hyper_parameter_decay_factor=0.9, hyper_parameter_maximum_decay=10, hyper_parameter_converge_threshold=1e-6):
         #assert(alpha_sufficient_statistics.shape == (1, self._number_of_topics));
-        assert(alpha_sufficient_statistics.shape == (self._number_of_topics, ));        
+        assert (alpha_sufficient_statistics.shape == (self._number_of_topics, ));        
         alpha_update = self._alpha_alpha;
         
         decay = 0;
-        for alpha_iteration in xrange(self._hyper_parameter_iteration):
+        for alpha_iteration in xrange(hyper_parameter_iteration):
             alpha_sum = numpy.sum(self._alpha_alpha);
             alpha_gradient = self._number_of_documents * (scipy.special.psi(alpha_sum) - scipy.special.psi(self._alpha_alpha)) + alpha_sufficient_statistics;
             alpha_hessian = -self._number_of_documents * scipy.special.polygamma(1, self._alpha_alpha);
@@ -237,7 +240,7 @@ class VariationalBayes(Inferencer):
             while True:
                 singular_hessian = False
 
-                step_size = numpy.power(self._hyper_parameter_update_decay_factor, decay) * (alpha_gradient - c) / alpha_hessian;
+                step_size = numpy.power(hyper_parameter_decay_factor, decay) * (alpha_gradient - c) / alpha_hessian;
                 #print "step size is", step_size
                 assert(self._alpha_alpha.shape == step_size.shape);
                 
@@ -248,7 +251,7 @@ class VariationalBayes(Inferencer):
                 
                 if singular_hessian:
                     decay += 1;
-                    if decay > self._hyper_parameter_maximum_decay:
+                    if decay > hyper_parameter_maximum_decay:
                         break;
                 else:
                     break;
@@ -257,7 +260,7 @@ class VariationalBayes(Inferencer):
             # check the alpha converge criteria
             mean_change = numpy.mean(abs(alpha_update - self._alpha_alpha));
             self._alpha_alpha = alpha_update;
-            if mean_change <= self._hyper_parameter_converge_threshold:
+            if mean_change <= hyper_parameter_converge_threshold:
                 break;
 
         return

@@ -32,11 +32,7 @@ class Inferencer():
     def __init__(self,
                  #local_parameter_iterations=50,
                  hyper_parameter_optimize_interval=10,
-                 hyper_parameter_iteration=100,
                  ):
-
-        self._hyper_parameter_iteration = hyper_parameter_iteration
-        assert(self._hyper_parameter_iteration>0)
         
         self._hyper_parameter_optimize_interval = hyper_parameter_optimize_interval;
         assert(self._hyper_parameter_optimize_interval>0);

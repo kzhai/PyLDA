@@ -3,7 +3,7 @@
 @author: Ke Zhai (zhaike@cs.umd.edu)
 """
 
-import math, random, time;
+import time;
 import numpy;
 import scipy;
 
@@ -11,6 +11,7 @@ import scipy;
 #from nltk import FreqDist
 from inferencer import compute_dirichlet_expectation
 from inferencer import Inferencer;
+from matplotlib.pyplot import step
 
 """
 This is a python implementation of lda, based on collapsed Gibbs sampling, with hyper parameter updating.
@@ -23,20 +24,20 @@ class MonteCarlo(Inferencer):
     """
     """
     def __init__(self,
-                hyper_parameter_optimize_interval=10,
-                 local_maximum_iteration=1, 
+                 hyper_parameter_optimize_interval=10,
+                 symmetric_alpha_alpha=True,
+                 symmetric_alpha_beta=True,
 
-                 hyper_parameter_iteration=50,):
+                 #local_parameter_iteration=1,
+                 ):
+        Inferencer.__init__(self, hyper_parameter_optimize_interval);
 
-        self._hyper_parameter_iteration = hyper_parameter_iteration
-        assert(self._hyper_parameter_iteration>0)
-        
-        self._hyper_parameter_optimize_interval = hyper_parameter_optimize_interval;
-        assert(self._hyper_parameter_optimize_interval>0);
-        
-        self._local_maximum_iteration = local_maximum_iteration
-        assert(self._local_maximum_iteration>0)
+        self._symmetric_alpha_alpha=symmetric_alpha_alpha
+        self._symmetric_alpha_beta=symmetric_alpha_beta
 
+        #self._local_parameter_iteration = local_parameter_iteration
+        #assert(self._local_parameter_iteration>0)
+                
     """
     @param num_topics: desired number of topics
     @param data: a dict data type, indexed by document id, value is a list of words in that document, not necessarily be unique
@@ -97,31 +98,103 @@ class MonteCarlo(Inferencer):
         
     """
     """
-    def optimize_hyperparameters(self, samples=5, step=3.0):
-        old_hyper_parameters = [math.log(self._alpha_alpha), math.log(self._alpha_beta)]
-
-        for ii in xrange(samples):
+    def optimize_hyperparameters(self, hyper_parameter_samples=10, hyper_parameter_step=1.0, hyper_parameter_iteration=50):
+        #old_hyper_parameters = [numpy.log(self._alpha_alpha), numpy.log(self._alpha_beta)]
+        #old_hyper_parameters = numpy.hstack((numpy.log(self._alpha_alpha), numpy.log(self._alpha_beta)));
+        #assert old_hyper_parameters.shape==(self._number_of_topics+self._number_of_types,);
+        
+        old_log_alpha_alpha = numpy.log(self._alpha_alpha);
+        old_log_alpha_beta = numpy.log(self._alpha_beta);
+        
+        for ii in xrange(hyper_parameter_samples):
             log_likelihood_old = self.log_posterior(self._alpha_alpha, self._alpha_beta)
-            log_likelihood_new = math.log(random.random()) + log_likelihood_old
-            #print("OLD: %f\tNEW: %f at (%f, %f)" % (log_likelihood_old, log_likelihood_new, self._alpha_alpha, self._alpha_beta))
+            log_likelihood_new = numpy.log(numpy.random.random()) + log_likelihood_old
+            
+            l_log_alpha_alpha = old_log_alpha_alpha;
+            if self._symmetric_alpha_alpha:
+                l_log_alpha_alpha -= numpy.random.random() * hyper_parameter_step
+            else:
+                l_log_alpha_alpha -= numpy.random.random(old_log_alpha_alpha.shape) * hyper_parameter_step
+            r_log_alpha_alpha = old_log_alpha_alpha + hyper_parameter_step;
+            assert numpy.all(l_log_alpha_alpha <= old_log_alpha_alpha), (l_log_alpha_alpha, old_log_alpha_alpha);
+            assert numpy.all(r_log_alpha_alpha >= old_log_alpha_alpha), (r_log_alpha_alpha, old_log_alpha_alpha);
+            
+            l_log_alpha_beta = old_log_alpha_beta;
+            if self._symmetric_alpha_beta:
+                l_log_alpha_beta -= numpy.random.random() * hyper_parameter_step
+            else:
+                l_log_alpha_beta -= numpy.random.random(old_log_alpha_beta.shape) * hyper_parameter_step
+            r_log_alpha_beta = old_log_alpha_beta + hyper_parameter_step;
+            assert numpy.all(l_log_alpha_beta <= old_log_alpha_beta), (l_log_alpha_beta, old_log_alpha_beta);
+            assert numpy.all(r_log_alpha_beta >= old_log_alpha_beta), (r_log_alpha_beta, old_log_alpha_beta);
+            
+            #l = old_hyper_parameters - numpy.random.random(old_hyper_parameters.shape) * hyper_parameter_step
+            #r = old_hyper_parameters + hyper_parameter_step;
 
-            l = [x - random.random() * step for x in old_hyper_parameters]
-            r = [x + step for x in old_hyper_parameters]
+            #l = [x - numpy.random.random() * hyper_parameter_step for x in old_hyper_parameters]
+            #r = [x + hyper_parameter_step for x in old_hyper_parameters]
 
-            for jj in xrange(self._hyper_parameter_iteration):
-                new_hyper_parameters = [l[x] + random.random() * (r[x] - l[x]) for x in xrange(len(old_hyper_parameters))]
-                trial_alpha, trial_beta = [math.exp(x) for x in new_hyper_parameters]
-                lp_test = self.log_posterior(trial_alpha, trial_beta)
+            for jj in xrange(hyper_parameter_iteration):
+                #new_hyper_parameters = l + numpy.random.random(old_hyper_parameters.shape) * (r - l);
+                #new_alpha_alpha = numpy.exp(new_hyper_parameters[:self._number_of_topics]);
+                #new_alpha_beta = numpy.exp(new_hyper_parameters[self._number_of_topics:]);
+                
+                new_log_alpha_alpha = l_log_alpha_alpha;
+                if self._symmetric_alpha_alpha:
+                    new_log_alpha_alpha += numpy.random.random() * (r_log_alpha_alpha - l_log_alpha_alpha);
+                else:
+                    new_log_alpha_alpha += numpy.random.random(new_log_alpha_alpha.shape) * (r_log_alpha_alpha - l_log_alpha_alpha);
+                new_alpha_alpha = numpy.exp(new_log_alpha_alpha);
+                
+                new_log_alpha_beta = l_log_alpha_beta;
+                if self._symmetric_alpha_beta:
+                    new_log_alpha_beta += numpy.random.random() * (r_log_alpha_beta - l_log_alpha_beta);
+                else:
+                    new_log_alpha_beta += numpy.random.random(new_log_alpha_beta.shape) * (r_log_alpha_beta - l_log_alpha_beta);                    
+                new_alpha_beta = numpy.exp(new_log_alpha_beta);
+                
+                assert new_alpha_alpha.shape==(self._number_of_topics,)
+                assert new_alpha_beta.shape==(self._number_of_types,)
+                #new_hyper_parameters = [l[x] + numpy.random.random() * (r[x] - l[x]) for x in xrange(len(old_hyper_parameters))]
+                #new_alpha_alpha, new_alpha_beta = [numpy.exp(x) for x in new_hyper_parameters]
+                lp_test = self.log_posterior(new_alpha_alpha, new_alpha_beta)
 
                 if lp_test > log_likelihood_new:
-                    #print(jj)
-                    self._alpha_alpha = math.exp(new_hyper_parameters[0])
-                    self._alpha_beta = math.exp(new_hyper_parameters[1])
                     #self._alpha_sum = self._alpha_alpha * self._number_of_topics
                     #self._beta_sum = self._alpha_beta * self._number_of_types
-                    old_hyper_parameters = [math.log(self._alpha_alpha), math.log(self._alpha_beta)]
-                    break
+                    #old_hyper_parameters = [numpy.log(self._alpha_alpha), numpy.log(self._alpha_beta)]
+                    #old_hyper_parameters = new_hyper_parameters;
+                    
+                    old_log_alpha_alpha = new_log_alpha_alpha
+                    old_log_alpha_beta = new_log_alpha_beta
+                    
+                    self._alpha_alpha = new_alpha_alpha;
+                    self._alpha_beta = new_alpha_beta;
+                    
+                    assert numpy.all(l_log_alpha_alpha <= old_log_alpha_alpha), (l_log_alpha_alpha, old_log_alpha_alpha);
+                    assert numpy.all(r_log_alpha_alpha >= old_log_alpha_alpha), (r_log_alpha_alpha, old_log_alpha_alpha);
+                    
+                    break;
                 else:
+                    assert numpy.all(l_log_alpha_alpha <= old_log_alpha_alpha), (l_log_alpha_alpha, old_log_alpha_alpha);
+                    assert numpy.all(r_log_alpha_alpha >= old_log_alpha_alpha), (r_log_alpha_alpha, old_log_alpha_alpha);
+                    for dd in xrange(len(new_log_alpha_alpha)):
+                        if new_log_alpha_alpha[dd] < old_log_alpha_alpha[dd]:
+                            l_log_alpha_alpha[dd] = new_log_alpha_alpha[dd]
+                        else:
+                            r_log_alpha_alpha[dd] = new_log_alpha_alpha[dd]
+                    assert numpy.all(l_log_alpha_alpha <= old_log_alpha_alpha), (l_log_alpha_alpha, old_log_alpha_alpha);
+                    assert numpy.all(r_log_alpha_alpha >= old_log_alpha_alpha), (r_log_alpha_alpha, old_log_alpha_alpha);
+                    
+                    for dd in xrange(len(new_log_alpha_beta)):
+                        if new_log_alpha_beta[dd] < old_log_alpha_beta[dd]:
+                            l_log_alpha_beta[dd] = new_log_alpha_beta[dd]
+                        else:
+                            r_log_alpha_beta[dd] = new_log_alpha_beta[dd]
+                    assert numpy.all(l_log_alpha_beta <= old_log_alpha_beta)
+                    assert numpy.all(r_log_alpha_beta >= old_log_alpha_beta)
+                    
+                    '''
                     for dd in xrange(len(new_hyper_parameters)):
                         if new_hyper_parameters[dd] < old_hyper_parameters[dd]:
                             l[dd] = new_hyper_parameters[dd]
@@ -129,8 +202,9 @@ class MonteCarlo(Inferencer):
                             r[dd] = new_hyper_parameters[dd]
                         assert l[dd] <= old_hyper_parameters[dd]
                         assert r[dd] >= old_hyper_parameters[dd]
+                    '''
 
-            #print("\nNew hyperparameters (%i): %f %f" % (jj, self._alpha_alpha, self._alpha_beta))
+            #print("update hyper-parameters (%d, %d) to: %s %s" % (ii, jj, self._alpha_alpha, self._alpha_beta))
 
     """
     compute the log-likelihood of the model
@@ -181,39 +255,40 @@ class MonteCarlo(Inferencer):
     @param doc_id: a document id
     @param position: the position in doc_id, ranged as range(self._word_idss[doc_id])
     """
-    def sample_document(self, doc_id):
-        for position in xrange(len(self._word_idss[doc_id])):
-            assert position >= 0 and position < len(self._word_idss[doc_id])
+    def sample_document(self, doc_id, local_parameter_iteration=1):
+        for iter in xrange(local_parameter_iteration):
+            for position in xrange(len(self._word_idss[doc_id])):
+                assert position >= 0 and position < len(self._word_idss[doc_id])
+                
+                #retrieve the word_id
+                word_id = self._word_idss[doc_id][position]
             
-            #retrieve the word_id
-            word_id = self._word_idss[doc_id][position]
+                #get the old topic assignment to the word_id in doc_id at position
+                old_topic = self._k_dn[doc_id][position]
+                if old_topic != -1:
+                    #this word_id already has a valid topic assignment, decrease the topic|doc_id counts and word_id|topic counts by covering up that word_id
+                    self._n_dk[doc_id, old_topic] -= 1
+                    self._n_kv[old_topic, word_id] -= 1;
+                    self._n_k[old_topic] -= 1;
         
-            #get the old topic assignment to the word_id in doc_id at position
-            old_topic = self._k_dn[doc_id][position]
-            if old_topic != -1:
-                #this word_id already has a valid topic assignment, decrease the topic|doc_id counts and word_id|topic counts by covering up that word_id
-                self._n_dk[doc_id, old_topic] -= 1
-                self._n_kv[old_topic, word_id] -= 1;
-                self._n_k[old_topic] -= 1;
+                #compute the topic probability of current word_id, given the topic assignment for other words
+                log_probability = numpy.log(self._n_dk[doc_id, :] + self._alpha_alpha); 
+                log_probability += numpy.log(self._n_kv[:, word_id] + self._alpha_beta[word_id]);
+                log_probability -= numpy.log(self._n_k + numpy.sum(self._alpha_beta));
     
-            #compute the topic probability of current word_id, given the topic assignment for other words
-            log_probability = numpy.log(self._n_dk[doc_id, :] + self._alpha_alpha); 
-            log_probability += numpy.log(self._n_kv[:, word_id] + self._alpha_beta[word_id]);
-            log_probability -= numpy.log(self._n_k + numpy.sum(self._alpha_beta));
-
-            log_probability -= scipy.misc.logsumexp(log_probability)
-            
-            #sample a new topic out of a distribution according to log_probability
-            temp_probability = numpy.exp(log_probability);
-            temp_topic_probability = numpy.random.multinomial(1, temp_probability)[numpy.newaxis, :]
-            new_topic = numpy.nonzero(temp_topic_probability == 1)[1][0];
-    
-            #after we draw a new topic for that word_id, we will change the topic|doc_id counts and word_id|topic counts, i.e., add the counts back
-            self._n_dk[doc_id, new_topic] += 1
-            self._n_kv[new_topic, word_id] += 1;
-            self._n_k[new_topic] += 1;
-            #assign the topic for the word_id of current document at current position
-            self._k_dn[doc_id][position] = new_topic
+                log_probability -= scipy.misc.logsumexp(log_probability)
+                
+                #sample a new topic out of a distribution according to log_probability
+                temp_probability = numpy.exp(log_probability);
+                temp_topic_probability = numpy.random.multinomial(1, temp_probability)[numpy.newaxis, :]
+                new_topic = numpy.nonzero(temp_topic_probability == 1)[1][0];
+        
+                #after we draw a new topic for that word_id, we will change the topic|doc_id counts and word_id|topic counts, i.e., add the counts back
+                self._n_dk[doc_id, new_topic] += 1
+                self._n_kv[new_topic, word_id] += 1;
+                self._n_k[new_topic] += 1;
+                #assign the topic for the word_id of current document at current position
+                self._k_dn[doc_id][position] = new_topic
 
     """
     sample the corpus to train the parameters
@@ -228,8 +303,7 @@ class MonteCarlo(Inferencer):
 
         #sample every document
         for doc_id in xrange(self._number_of_documents):
-            for iter in xrange(self._local_maximum_iteration):
-                self.sample_document(doc_id)
+            self.sample_document(doc_id)
 
             if (doc_id+1) % 1000==0:
                 print "successfully sampled %d documents" % (doc_id+1)
