@@ -4,7 +4,7 @@ Hybrid Update for Vanilla LDA
 """
 
 import time
-import numpy
+import numpy;
 import scipy
 import nltk;
 
@@ -39,7 +39,7 @@ class Hybrid(Inferencer):
         #self._gamma_converge_threshold = gamma_converge_threshold;
         self._number_of_samples = number_of_samples;
         self._burn_in_samples = burn_in_samples;
-
+        
     """
     """
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
@@ -52,8 +52,28 @@ class Hybrid(Inferencer):
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
         self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
         
-        # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
+    def parse_data(self):
+        doc_count = 0
+        
+        self._word_idss = [];
+        
+        for document_line in self._corpus:
+            word_ids = [];
+            for token in document_line.split():
+                if token not in self._type_to_index:
+                    continue;
+                
+                type_id = self._type_to_index[token];
+                word_ids.append(type_id);
+            
+            self._word_idss.append(word_ids);
+            
+            doc_count+=1
+            if doc_count%10000==0:
+                print "successfully parse %d documents..." % doc_count;
+        
+        assert len(self._word_ids)==len(self._word_cts);
+        print "successfully parse %d documents..." % (doc_count);        
     
     def e_step(self):
         # initialize a V-by-K matrix phi contribution
@@ -63,24 +83,24 @@ class Hybrid(Inferencer):
         #batch_document_topic_distribution = numpy.zeros((batchD, self._number_of_topics));
 
         # iterate over all documents
-        for d in xrange(self._number_of_documents):
-            phi = numpy.random.random((self._number_of_topics, len(self._corpus[d])));
+        for doc_id in xrange(self._number_of_documents):
+            phi = numpy.random.random((self._number_of_topics, len(self._word_idss[doc_id])));
             phi = phi / numpy.sum(phi, axis=0)[numpy.newaxis, :];
             phi_sum = numpy.sum(phi, axis=1)[:, numpy.newaxis];
             assert(phi_sum.shape == (self._number_of_topics, 1));
 
             # collect phi samples from empirical distribution
             for it in xrange(self._number_of_samples):
-                for n in xrange(len(self._corpus[d])):
-                    id = self._corpus[d][n];
+                for word_pos in xrange(len(self._word_idss[doc_id])):
+                    word_index = self._word_idss[doc_id][word_pos];
                     
-                    phi_sum -= phi[:, n][:, numpy.newaxis];
+                    phi_sum -= phi[:, word_pos][:, numpy.newaxis];
                     
                     # this is to get rid of the underflow error from the above summation, ideally, phi will become all integers after few iterations
                     phi_sum *= phi_sum > 0;
                     #assert(numpy.all(phi_sum >= 0));
 
-                    temp_phi = (phi_sum.T + self._alpha_alpha) * self._exp_E_log_beta[:, [id]].T;
+                    temp_phi = (phi_sum.T + self._alpha_alpha) * self._exp_E_log_beta[:, [word_index]].T;
                     assert(temp_phi.shape == (1, self._number_of_topics));
                     temp_phi /= numpy.sum(temp_phi);
 
@@ -88,20 +108,20 @@ class Hybrid(Inferencer):
                     temp_phi = numpy.random.multinomial(1, temp_phi[0])[:, numpy.newaxis];
                     assert(temp_phi.shape == (self._number_of_topics, 1));
                     
-                    phi[:, n][:, numpy.newaxis] = temp_phi;
+                    phi[:, word_pos][:, numpy.newaxis] = temp_phi;
                     phi_sum += temp_phi;
 
                     # discard the first few burn-in sweeps
                     if it < self._burn_in_samples:
                         continue;
                     
-                    sufficient_statistics[:, id] += temp_phi[:, 0];
+                    sufficient_statistics[:, word_index] += temp_phi[:, 0];
 
-            self._gamma[d, :] = self._alpha_alpha + phi_sum.T[0, :];
-            #batch_document_topic_distribution[d, :] = self._alpha_alpha + phi_sum.T[0, :];
+            self._gamma[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
+            #batch_document_topic_distribution[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
             
-            if (d+1) % 1000==0:
-                print "successfully processed %d documents..." % (d+1);
+            if (doc_id+1) % 1000==0:
+                print "successfully processed %doc_id documents..." % (doc_id+1);
 
         sufficient_statistics /= (self._number_of_samples - self._burn_in_samples);
 

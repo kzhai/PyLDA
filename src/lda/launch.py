@@ -54,7 +54,7 @@ def parse_args():
     # parameter set 4
     #parser.add_option("--disable_alpha_theta_update", action="store_true", dest="disable_alpha_theta_update",
                       #help="disable alpha (hyper-parameter for Dirichlet distribution of topics) update");
-    parser.add_option("--inference_mode", type="string", dest="inference_mode",
+    parser.add_option("--inference_mode", type="int", dest="inference_mode",
                       help="inference mode [ " + 
                             "0: hybrid inference, " + 
                             "1: monte carlo, " + 
@@ -114,7 +114,7 @@ def main():
     suffix += "-K%d" % (number_of_topics);
     suffix += "-aa%f" % (alpha_alpha);
     suffix += "-ae%f" % (alpha_eta);
-    suffix += "-im%f" % (inference_mode);
+    suffix += "-im%d" % (inference_mode);
     # suffix += "-%s" % (resample_topics);
     # suffix += "-%s" % (hash_oov_words);
     suffix += "/";
@@ -131,7 +131,7 @@ def main():
     # parameter set 1
     options_output_file.write("input_directory=" + input_directory + "\n");
     options_output_file.write("corpus_name=" + corpus_name + "\n");
-    #options_output_file.write("dictionary_file=" + str(dict_file) + "\n");
+    #options_output_file.write("vocabulary_path=" + str(dict_file) + "\n");
     # parameter set 2
     options_output_file.write("training_iterations=%d\n" % (training_iterations));
     options_output_file.write("snapshot_interval=" + str(snapshot_interval) + "\n");
@@ -161,21 +161,21 @@ def main():
     print "========== ========== ========== ========== =========="
 
     # Document
+    train_docs_path = os.path.join(input_directory, 'doc.dat')
+    input_doc_stream = open(train_docs_path, 'r');
     train_docs = [];
-    input_doc_stream = open(os.path.join(input_directory, 'doc.dat'), 'r');
     for line in input_doc_stream:
         train_docs.append(line.strip().lower());
-    print "successfully load all training train_docs..."
+    print "successfully load all training train docs from %s..." % (os.path.abspath(train_docs_path));
     
     # Vocabulary
-    dictionary_file = os.path.join(input_directory, 'voc.dat');
-    input_voc_stream = open(dictionary_file, 'r');
+    vocabulary_path = os.path.join(input_directory, 'voc.dat');
+    input_voc_stream = open(vocabulary_path, 'r');
     vocab = [];
     for line in input_voc_stream:
         vocab.append(line.strip().lower().split()[0]);
     vocab = list(set(vocab));
-    print "successfully load all the words from %s..." % (dictionary_file);
-    
+    print "successfully load all the words from %s..." % (os.path.abspath(vocabulary_path));
     
     if inference_mode==0:
         import hybrid
@@ -196,7 +196,7 @@ def main():
         lda_inference.learning();
         
         if (lda_inference._counter % snapshot_interval == 0):
-            lda_inference.export_topic_term_distribution(output_directory + 'exp_beta-' + str(lda_inference._counter));
+            lda_inference.export_beta(output_directory + 'exp_beta-' + str(lda_inference._counter));
     
 if __name__ == '__main__':
     main()

@@ -10,7 +10,7 @@ import scipy.misc;
 import nltk;
 import string;
 
-from inferencer import compute_dirichlet_expectation, parse_vocabulary
+from inferencer import compute_dirichlet_expectation
 from inferencer import Inferencer;
 
 """
@@ -49,7 +49,7 @@ def parse_data(corpus, vocab):
     
     return word_ids, word_cts
 
-class VariationalBayes():
+class VariationalBayes(Inferencer):
     """
     """
     def __init__(self,
@@ -99,7 +99,7 @@ class VariationalBayes():
                 
         for document_line in self._corpus:
             #words = document_line.split();
-            document_word_dict = []
+            document_word_dict = {}
             for token in document_line.split():
                 if token not in self._type_to_index:
                     continue;
@@ -110,7 +110,7 @@ class VariationalBayes():
                 document_word_dict[type_id] += 1;
                 
             self._word_ids.append(numpy.array(document_word_dict.keys()));
-            self._word_cts.append(numpy.array(document_word_dict.values()));
+            self._word_cts.append(numpy.array(document_word_dict.values())[numpy.newaxis, :]);
             
             doc_count+=1
             if doc_count%10000==0:
@@ -138,7 +138,7 @@ class VariationalBayes():
             #term_counts = numpy.array([self._corpus[doc_id].values()]);
             term_ids = self._word_ids[doc_id];
             term_counts = self._word_cts[doc_id];
-            assert(term_counts.shape == (1, len(term_ids)));
+            assert term_counts.shape == (1, len(term_ids));
 
             # update phi and gamma until gamma converges
             for gamma_iteration in xrange(self._gamma_maximum_iteration):

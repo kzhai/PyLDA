@@ -4,6 +4,7 @@
 """
 
 import math, random, time;
+import numpy;
 import scipy;
 
 #from collections import defaultdict
@@ -43,28 +44,58 @@ class MonteCarlo(Inferencer):
     @param data: a dict data type, indexed by document id, value is a list of words in that document, not necessarily be unique
     """
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
-        Inferencer._initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta);
+        Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
+        
+        self._corpus = corpus;
+        self.parse_data();
+        
+        # define the total number of document
+        self._number_of_documents = len(self._word_idss);
         
         # define the counts over different topics for all documents, first indexed by doc_id id, the indexed by topic id
         self._n_dk = numpy.zeros((self._number_of_documents, self._number_of_topics));
         # define the counts over words for all topics, first indexed by topic id, then indexed by token id
         self._n_kv = numpy.zeros((self._number_of_topics, self._number_of_types));
         # define the topic assignment for every word in every document, first indexed by doc_id id, then indexed by word word_pos
-        self._k_dn = [];
+        self._k_dn = {};
         
-        self._alpha_sum = self._alpha_alpha * self._number_of_topics
+        self._alpha_sum = numpy.sum(self._alpha_alpha);
+        
+        self.random_initialize();
 
-
-    
+    def random_initialize(self):
         # initialize the vocabulary, i.e. a list of distinct tokens.
         for doc_id in xrange(self._number_of_documents):
-            self._k_dn[doc_id] = numpy.zeros(len(self._corpus[doc_id]));
-            for word_pos in xrange(len(self._corpus[doc_id])):
-                # initialize the state to unassigned
-                self._k_dn[doc_id][word_pos] = -1;
+            self._k_dn[doc_id] = numpy.zeros(len(self._word_idss[doc_id]));
+            for word_pos in xrange(len(self._word_idss[doc_id])):
+                type_index = self._word_idss[doc_id][word_pos];
+                topic_index = numpy.random.randint(self._number_of_topics);
                 
+                self._k_dn[doc_id][word_pos] = topic_index;
+                self._n_dk[doc_id, topic_index] += 1;
+                self._n_kv[topic_index, type_index] += 1;
         
+    def parse_data(self):
+        doc_count = 0
         
+        self._word_idss = [];
+        
+        for document_line in self._corpus:
+            word_ids = [];
+            for token in document_line.split():
+                if token not in self._type_to_index:
+                    continue;
+                
+                type_id = self._type_to_index[token];
+                word_ids.append(type_id);
+            
+            self._word_idss.append(word_ids);
+            
+            doc_count+=1
+            if doc_count%10000==0:
+                print "successfully parse %d documents..." % doc_count;
+        
+        print "successfully parse %d documents..." % (doc_count);        
         
     """
     """
@@ -107,7 +138,7 @@ class MonteCarlo(Inferencer):
     compute the log-likelihood of the model
     """
     def compute_likelihood(self, alpha, beta):
-        assert len(self._n_dk) == self._number_of_documents
+        assert self._n_dk.shape==(self._number_of_documents, self._number_of_topics);
         
         alpha_sum = alpha * self._number_of_topics
         beta_sum = beta * self._number_of_types
@@ -153,49 +184,42 @@ class MonteCarlo(Inferencer):
     """
     this method samples the word at position in document, by covering that word and compute its new topic distribution, in the end, both self._k_dn, self._n_dk and self._n_kv will change
     @param doc_id: a document id
-    @param position: the position in doc_id, ranged as range(self._corpus[doc_id])
+    @param position: the position in doc_id, ranged as range(self._word_idss[doc_id])
     """
     def sample_document(self, doc_id):
-        for position in xrange(len(self._corpus[doc_id])):
-            assert position >= 0 and position < len(self._corpus[doc_id])
+        for position in xrange(len(self._word_idss[doc_id])):
+            assert position >= 0 and position < len(self._word_idss[doc_id])
             
             #retrieve the word_id
-            word_id = self._corpus[doc_id][position]
+            word_id = self._word_idss[doc_id][position]
         
             #get the old topic assignment to the word_id in doc_id at position
             old_topic = self._k_dn[doc_id][position]
             if old_topic != -1:
                 #this word_id already has a valid topic assignment, decrease the topic|doc_id counts and word_id|topic counts by covering up that word_id
-                self.change_count(doc_id, word_id, old_topic, -1)
+                self._n_dk[doc_id, old_topic] -= 1
+                self._n_kv[old_topic, word_id] -= 1;
     
             #compute the topic probability of current word_id, given the topic assignment for other words
-            probs = [self.log_prob(doc_id, self._corpus[doc_id][position], x) for x in xrange(self._number_of_topics)]
-    
-            #sample a new topic out of a distribution according to probs
-            new_topic = util.log_math.log_sample(probs)
+            log_probability = [self.log_prob(doc_id, self._word_idss[doc_id][position], x) for x in xrange(self._number_of_topics)]
+            log_probability -= scipy.misc.logsumexp(log_probability)
+            
+            #sample a new topic out of a distribution according to log_probability
+            temp_probability = numpy.exp(log_probability);
+            temp_topic_probability = numpy.random.multinomial(1, temp_probability)[numpy.newaxis, :]
+            new_topic = numpy.nonzero(temp_topic_probability == 1)[1][0];
     
             #after we draw a new topic for that word_id, we will change the topic|doc_id counts and word_id|topic counts, i.e., add the counts back
-            self.change_count(doc_id, word_id, new_topic, 1)
+            self._n_dk[doc_id, new_topic] += 1
+            self._n_kv[new_topic, word_id] += 1;
             #assign the topic for the word_id of current document at current position
             self._k_dn[doc_id][position] = new_topic
-
-    """
-    this methods change the count of a topic in one doc_id and a word of one topic by delta
-    this values will be used in the computation
-    @param doc_id: the doc_id id
-    @param word: the word id
-    @param topic: the topic id
-    @param delta: the change in the value
-    """
-    def change_count(self, doc_id, word_id, topic_id, delta):
-        self._n_dk[doc_id].inc(topic_id, delta)
-        self._n_kv[topic_id].inc(word_id, delta)
 
     """
     sample the corpus to train the parameters
     @param hyper_delay: defines the delay in updating they hyper parameters, i.e., start updating hyper parameter only after hyper_delay number of gibbs sampling iterations. Usually, it specifies a burn-in period.
     """
-    def sample(self):
+    def learning(self):
         #sample the total corpus
         #for iter1 in xrange(number_of_iterations):
         self._counter += 1;
