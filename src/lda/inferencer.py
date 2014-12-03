@@ -79,67 +79,6 @@ class Inferencer():
         
     def parse_data(self):
         raise NotImplementedError;
-    
-    def e_step(self):
-        # initialize a V-by-K matrix phi contribution
-        sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_types));
-        
-        # Initialize the variational distribution q(theta|gamma) for the mini-batch
-        #batch_document_topic_distribution = numpy.zeros((batchD, self._number_of_topics));
-
-        # iterate over all documents
-        for d in xrange(self._number_of_documents):
-            phi = numpy.random.random((self._number_of_topics, len(self._corpus[d])));
-            phi = phi / numpy.sum(phi, axis=0)[numpy.newaxis, :];
-            phi_sum = numpy.sum(phi, axis=1)[:, numpy.newaxis];
-            assert(phi_sum.shape == (self._number_of_topics, 1));
-
-            # collect phi samples from empirical distribution
-            for it in xrange(self._number_of_samples):
-                for n in xrange(len(self._corpus[d])):
-                    id = self._corpus[d][n];
-                    
-                    phi_sum -= phi[:, n][:, numpy.newaxis];
-                    
-                    # this is to get rid of the underflow error from the above summation, ideally, phi will become all integers after few iterations
-                    phi_sum *= phi_sum > 0;
-                    #assert(numpy.all(phi_sum >= 0));
-
-                    temp_phi = (phi_sum.T + self._alpha_alpha) * self._exp_E_log_beta[:, [id]].T;
-                    assert(temp_phi.shape == (1, self._number_of_topics));
-                    temp_phi /= numpy.sum(temp_phi);
-
-                    # sample a topic for this word
-                    temp_phi = numpy.random.multinomial(1, temp_phi[0])[:, numpy.newaxis];
-                    assert(temp_phi.shape == (self._number_of_topics, 1));
-                    
-                    phi[:, n][:, numpy.newaxis] = temp_phi;
-                    phi_sum += temp_phi;
-
-                    # discard the first few burn-in sweeps
-                    if it < self._burn_in_samples:
-                        continue;
-                    
-                    sufficient_statistics[:, id] += temp_phi[:, 0];
-
-            self._gamma[d, :] = self._alpha_alpha + phi_sum.T[0, :];
-            #batch_document_topic_distribution[d, :] = self._alpha_alpha + phi_sum.T[0, :];
-            
-            if (d+1) % 1000==0:
-                print "successfully processed %d documents..." % (d+1);
-
-        sufficient_statistics /= (self._number_of_samples - self._burn_in_samples);
-
-        return sufficient_statistics
-
-    def m_step(self, phi_sufficient_statistics):
-        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(phi_sufficient_statistics+self._alpha_beta));
-        assert(self._exp_E_log_beta.shape == (self._number_of_topics, self._number_of_types));
-        
-        # compute the sufficient statistics for alpha and update
-        alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
-        alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0)[numpy.newaxis, :];
-        self.update_alpha(alpha_sufficient_statistics)
 
     """
     """
