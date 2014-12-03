@@ -49,9 +49,9 @@ def parse_args():
     #parser.add_option("--disable_alpha_theta_update", action="store_true", dest="disable_alpha_theta_update",
                       #help="disable alpha (hyper-parameter for Dirichlet distribution of topics) update");
     #parser.add_option("--inference_type", type="string", dest="inference_type",
-                      #help="inference type [cgs] cgs-CollapsedGibbsSampling uvb-UncollapsedVariationalBayes hybrid-HybridMode");
+                      #help="inference type [cgs] cgs-CollapsedGibbsSampling uvb-UncollapsedVariationalBayes lda-HybridMode");
     #parser.add_option("--inference_type", action="store_true", dest="inference_type",
-    #                  help="run latent Dirichlet allocation in hybrid mode");
+    #                  help="run latent Dirichlet allocation in lda mode");
     parser.add_option("--snapshot_interval", type="int", dest="snapshot_interval",
                       help="snapshot interval [vocab_prune_interval]");
 

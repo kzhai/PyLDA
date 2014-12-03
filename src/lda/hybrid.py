@@ -8,14 +8,17 @@ import numpy
 import scipy
 import nltk;
 
+from inferencer import compute_dirichlet_expectation
+from inferencer import Inferencer;
+
 """
-This is a python implementation of vanilla lda, based on a hybrid approach of variational inference and gibbs sampling, with hyper parameter updating.
+This is a python implementation of vanilla lda, based on a lda approach of variational inference and gibbs sampling, with hyper parameter updating.
 It supports asymmetric Dirichlet prior over the topic simplex.
 
 References:
 [1] D. Mimno, M. Hoffman, D. Blei. Sparse Stochastic Inference for Latent Dirichlet Allocation. Internal Conference on Machine Learning, Jun 2012.
 """
-class Hybrid():
+class Hybrid(Inferencer):
     """
     """
     def __init__(self,
@@ -39,41 +42,18 @@ class Hybrid():
 
     """
     """
-    def _initialize(self, data, vocab, number_of_topics, alpha_alpha, alpha_eta):
-        self._counter = 0;
+    def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
+        Inferencer._initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta);
         
-        self._type_to_index = {};
-        self._index_to_type = {};
-        for word in set(vocab):
-            self._index_to_type[len(self._index_to_type)] = word;
-            self._type_to_index[word] = len(self._type_to_index);
-            
-        self._vocabulary = self._type_to_index.keys();
-        self._vocabulary_size = len(self._vocabulary);
-        
-        # initialize the total number of topics.
-        self._number_of_topics = number_of_topics
-        
-        # initialize a K-dimensional vector, valued at 1/K.
-        #self._alpha_alpha = numpy.random.random((1, self._number_of_topics)) / self._number_of_topics;
-        self._alpha_alpha = numpy.zeros((1, self._number_of_topics))+alpha_alpha;
-        self._alpha_eta = alpha_eta;
-
-        # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
-        self._data = data
-        
-        # initialize the size of the collection, i.e., total number of documents.
-        self._number_of_documents = len(self._data)
-        
-        # initialize the size of the vocabulary, i.e. total number of distinct tokens.
-        self._number_of_types = len(self._type_to_index)
-                
         # initialize a D-by-K matrix gamma, valued at N_d/K
-        #self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics;
-        self._gamma = numpy.tile(self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics, (self._number_of_documents, 1));
+        self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics;
+        #self._gamma = numpy.tile(self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics, (self._number_of_documents, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
+        self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
+        
+        # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
+        self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
     
     def e_step(self):
         # initialize a V-by-K matrix phi contribution
@@ -84,15 +64,15 @@ class Hybrid():
 
         # iterate over all documents
         for d in xrange(self._number_of_documents):
-            phi = numpy.random.random((self._number_of_topics, len(self._data[d])));
+            phi = numpy.random.random((self._number_of_topics, len(self._corpus[d])));
             phi = phi / numpy.sum(phi, axis=0)[numpy.newaxis, :];
             phi_sum = numpy.sum(phi, axis=1)[:, numpy.newaxis];
             assert(phi_sum.shape == (self._number_of_topics, 1));
 
             # collect phi samples from empirical distribution
             for it in xrange(self._number_of_samples):
-                for n in xrange(len(self._data[d])):
-                    id = self._data[d][n];
+                for n in xrange(len(self._corpus[d])):
+                    id = self._corpus[d][n];
                     
                     phi_sum -= phi[:, n][:, numpy.newaxis];
                     
@@ -128,7 +108,7 @@ class Hybrid():
         return sufficient_statistics
 
     def m_step(self, phi_sufficient_statistics):
-        self._exp_E_log_beta = numpy.exp(self.compute_dirichlet_expectation(phi_sufficient_statistics+self._alpha_eta));
+        self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(phi_sufficient_statistics+self._alpha_beta));
         assert(self._exp_E_log_beta.shape == (self._number_of_topics, self._number_of_types));
         
         # compute the sufficient statistics for alpha and update
@@ -138,7 +118,7 @@ class Hybrid():
 
     """
     """
-    def learn(self):
+    def learning(self):
         self._counter += 1;
         
         clock_e_step = time.time();        
@@ -221,7 +201,7 @@ class Hybrid():
 
         return
 
-    def export_topic_term_distribution(self, exp_beta_path):
+    def export_beta(self, exp_beta_path):
         output = open(exp_beta_path, 'w');
         for k in xrange(self._number_of_topics):
             output.write("==========\t%d\t==========\n" % (k));

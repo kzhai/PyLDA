@@ -117,12 +117,13 @@ def main():
     vocab = list(set(vocab));
     print "successfully load all the words from %s..." % (dictionary_file);
     
-    import hybrid;
-    lda_inference = hybrid.Hybrid();
+    
+    import lda
+    lda_inference = lda.Hybrid();
     lda_inference._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_eta);
     
     for iteration in xrange(number_of_iterations):
-        lda_inference.learn();
+        lda_inference.learning();
         
         if (lda_inference._counter % snapshot_interval == 0):
             lda_inference.export_topic_term_distribution(output_directory + 'exp_beta-' + str(lda_inference._counter));
