@@ -73,6 +73,11 @@ class Inferencer():
     """
     def learning(self):
         raise NotImplementedError;
+    
+    """
+    """
+    def inference(self):
+        raise NotImplementedError;
 
     def export_beta(self, exp_beta_path, top_display=-1):
         raise NotImplementedError;

@@ -78,26 +78,29 @@ class VariationalBayes(Inferencer):
     """
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
         Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
-        
+
         self._corpus = corpus;
-        self.parse_data();
+        self._parsed_corpus = self.parse_data();
         
         # define the total number of document
-        self._number_of_documents = len(self._word_ids);
-
+        self._number_of_documents = len(self._parsed_corpus[0]);
+        
         # initialize a D-by-K matrix gamma, valued at N_d/K
         self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha_alpha[numpy.newaxis, :] + 1.0 * self._number_of_types / self._number_of_topics;
 
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
         self._E_log_beta = compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types)));
 
-    def parse_data(self):
+    def parse_data(self, corpus=None):
+        if corpus==None:
+            corpus=self._corpus;
+            
         doc_count = 0
         
-        self._word_ids = [];
-        self._word_cts = [];
+        word_ids = [];
+        word_cts = [];
                 
-        for document_line in self._corpus:
+        for document_line in corpus:
             #words = document_line.split();
             document_word_dict = {}
             for token in document_line.split():
@@ -109,42 +112,57 @@ class VariationalBayes(Inferencer):
                     document_word_dict[type_id] = 0;
                 document_word_dict[type_id] += 1;
                 
-            self._word_ids.append(numpy.array(document_word_dict.keys()));
-            self._word_cts.append(numpy.array(document_word_dict.values())[numpy.newaxis, :]);
+            word_ids.append(numpy.array(document_word_dict.keys()));
+            word_cts.append(numpy.array(document_word_dict.values())[numpy.newaxis, :]);
             
             doc_count+=1
             if doc_count%10000==0:
                 print "successfully parse %d documents..." % doc_count;
         
-        assert len(self._word_ids)==len(self._word_cts);
+        assert len(word_ids)==len(word_cts);
         print "successfully parse %d documents..." % (doc_count);
         
-    def e_step(self, local_parameter_iteration=50, local_parameter_converge_threshold=1e-6):
+        return (word_ids, word_cts)
+        
+    def e_step(self, parsed_corpus=None, local_parameter_iteration=50, local_parameter_converge_threshold=1e-6):
+        if parsed_corpus==None:
+            word_ids = self._parsed_corpus[0];
+            word_cts = self._parsed_corpus[1];
+        else:
+            word_ids = parsed_corpus[0]
+            word_cts = parsed_corpus[1];
+        
+        assert len(word_ids)==len(word_cts);
+        number_of_documents = len(word_ids);
+        
         likelihood_phi = 0.0;
 
-        # initialize a V-by-K matrix phi contribution
+        # initialize a V-by-K matrix phi sufficient statistics
         phi_sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_types));
         
+        # initialize a D-by-K matrix gamma values
+        gamma_values = numpy.zeros((number_of_documents, self._number_of_topics)) + self._alpha_alpha[numpy.newaxis, :] + 1.0 * self._number_of_types / self._number_of_topics;
+        
         # iterate over all documents
-        for doc_id in xrange(self._number_of_documents):
+        for doc_id in xrange(number_of_documents):
             # compute the total number of words
             #total_word_count = self._corpus[doc_id].N()
-            total_word_count = numpy.sum(self._word_cts[doc_id]);
+            total_word_count = numpy.sum(word_cts[doc_id]);
 
             # initialize gamma for this document
-            self._gamma[doc_id, :] = self._alpha_alpha + 1.0 * total_word_count / self._number_of_topics;
+            gamma_values[doc_id, :] = self._alpha_alpha + 1.0 * total_word_count / self._number_of_topics;
             
             #term_ids = numpy.array(self._corpus[doc_id].keys());
             #term_counts = numpy.array([self._corpus[doc_id].values()]);
-            term_ids = self._word_ids[doc_id];
-            term_counts = self._word_cts[doc_id];
+            term_ids = word_ids[doc_id];
+            term_counts = word_cts[doc_id];
             assert term_counts.shape == (1, len(term_ids));
 
             # update phi and gamma until gamma converges
             for gamma_iteration in xrange(local_parameter_iteration):
                 assert self._E_log_beta.shape==(self._number_of_topics, self._number_of_types);
                 #log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (len(self._corpus[doc_id]), 1));
-                log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (self._word_ids[doc_id].shape[0], 1));
+                log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(gamma_values[[doc_id], :]), (word_ids[doc_id].shape[0], 1));
                 assert log_phi.shape==(len(term_ids), self._number_of_topics);
                 phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
                 assert(phi_normalizer.shape == (len(term_ids), 1));
@@ -153,19 +171,19 @@ class VariationalBayes(Inferencer):
                 
                 gamma_update = self._alpha_alpha + numpy.array(numpy.sum(numpy.exp(log_phi + numpy.log(term_counts.transpose())), axis=0));
                 
-                mean_change = numpy.mean(abs(gamma_update - self._gamma[doc_id, :]));
-                self._gamma[doc_id, :] = gamma_update;
+                mean_change = numpy.mean(abs(gamma_update - gamma_values[doc_id, :]));
+                gamma_values[doc_id, :] = gamma_update;
                 if mean_change <= local_parameter_converge_threshold:
                     break;
                 
             likelihood_phi += numpy.sum(numpy.exp(log_phi) * ((self._E_log_beta[:, term_ids].T * term_counts.transpose()) - log_phi));
             assert(log_phi.shape == (len(term_ids), self._number_of_topics));
             phi_sufficient_statistics[:, term_ids] += numpy.exp(log_phi.T);
-        
+            
             if (doc_id+1) % 1000==0:
                 print "successfully processed %d documents..." % (doc_id+1);
             
-        return phi_sufficient_statistics, likelihood_phi
+        return gamma_values, phi_sufficient_statistics, likelihood_phi
 
     def m_step(self, phi_sufficient_statistics):
         self._E_log_beta = compute_dirichlet_expectation(phi_sufficient_statistics+self._alpha_beta);
@@ -183,7 +201,8 @@ class VariationalBayes(Inferencer):
         self._counter += 1;
         
         clock_e_step = time.time();        
-        phi_sufficient_statistics, likelihood_phi = self.e_step();
+        gamma_values, phi_sufficient_statistics, likelihood_phi = self.e_step();
+        self._gamma = gamma_values;
         clock_e_step = time.time() - clock_e_step;
         
         clock_m_step = time.time();        
@@ -211,6 +230,34 @@ class VariationalBayes(Inferencer):
         #old_likelihood = new_likelihood;
         
         return new_likelihood
+
+    def inference(self, corpus):
+        parsed_corpus = self.parse_data(corpus);
+        number_of_documents = len(parsed_corpus[0]);
+        
+        clock_e_step = time.time();        
+        gamma_values, phi_sufficient_statistics, likelihood_phi = self.e_step(parsed_corpus);
+        clock_e_step = time.time() - clock_e_step;
+        
+        # compute the log-likelihood of alpha terms
+        alpha_sum = numpy.sum(self._alpha_alpha);
+        likelihood_alpha = -numpy.sum(scipy.special.gammaln(self._alpha_alpha));
+        likelihood_alpha += scipy.special.gammaln(alpha_sum);
+        likelihood_alpha *= number_of_documents;
+        
+        likelihood_gamma = numpy.sum(scipy.special.gammaln(gamma_values));
+        likelihood_gamma -= numpy.sum(scipy.special.gammaln(numpy.sum(gamma_values, axis=1)));
+
+        new_likelihood = likelihood_alpha + likelihood_gamma + likelihood_phi;
+        
+        #print "e_step finished in %d with log likelihood %g" % (clock_e_step, new_likelihood)
+        
+        #if abs((new_likelihood - old_likelihood) / old_likelihood) < self._model_converge_threshold:
+            #print "model likelihood converged..."
+            #break
+        #old_likelihood = new_likelihood;
+        
+        return new_likelihood, gamma_values
 
     """
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id

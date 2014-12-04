@@ -39,10 +39,10 @@ class Hybrid(VariationalBayes, Inferencer):
         Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
         
         self._corpus = corpus;
-        self.parse_data();
+        self._parsed_corpus = self.parse_data();
         
         # define the total number of document
-        self._number_of_documents = len(self._word_idss);
+        self._number_of_documents = len(self._parsed_corpus);
         
         # initialize a D-by-K matrix gamma, valued at N_d/K
         #self._gamma = numpy.zeros((self._number_of_documents, self._number_of_topics)) + self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics;
@@ -52,12 +52,15 @@ class Hybrid(VariationalBayes, Inferencer):
         self._E_log_beta = compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types)));
         #self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
         
-    def parse_data(self):
+    def parse_data(self, corpus=None):
+        if corpus==None:
+            corpus = self._corpus;
+            
         doc_count = 0
         
-        self._word_idss = [];
+        word_idss = [];
         
-        for document_line in self._corpus:
+        for document_line in corpus:
             word_ids = [];
             for token in document_line.split():
                 if token not in self._type_to_index:
@@ -66,38 +69,46 @@ class Hybrid(VariationalBayes, Inferencer):
                 type_id = self._type_to_index[token];
                 word_ids.append(type_id);
             
-            self._word_idss.append(word_ids);
+            word_idss.append(word_ids);
             
             doc_count+=1
             if doc_count%10000==0:
                 print "successfully parse %d documents..." % doc_count;
         
         print "successfully parse %d documents..." % (doc_count);
+        
+        return word_idss;
     
-    def e_step(self, number_of_samples=10, burn_in_samples=5):
+    def e_step(self, parsed_corpus=None, number_of_samples=10, burn_in_samples=5):
+        if parsed_corpus==None:
+            word_idss = self._parsed_corpus;
+        else:
+            word_idss = parsed_corpus;
+        number_of_documents = len(word_idss);
+        
+        exp_E_log_beta = numpy.exp(self._E_log_beta);
+        
         likelihood_phi = 0.0;
 
         # initialize a V-by-K matrix phi contribution
         phi_sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_types));
-
-        exp_E_log_beta = numpy.exp(self._E_log_beta);
         
-        # Initialize the variational distribution q(theta|gamma) for the mini-batch
-        #batch_document_topic_distribution = numpy.zeros((batchD, self._number_of_topics));
+        # initialize a D-by-K matrix gamma values
+        gamma_values = numpy.zeros((number_of_documents, self._number_of_topics)) + self._alpha_alpha[numpy.newaxis, :] + 1.0 * self._number_of_types / self._number_of_topics;
 
         # iterate over all documents
-        for doc_id in xrange(self._number_of_documents):
-            phi = numpy.random.random((self._number_of_topics, len(self._word_idss[doc_id])));
+        for doc_id in xrange(number_of_documents):
+            phi = numpy.random.random((self._number_of_topics, len(word_idss[doc_id])));
             phi = phi / numpy.sum(phi, axis=0)[numpy.newaxis, :];
             phi_sum = numpy.sum(phi, axis=1)[:, numpy.newaxis];
             assert(phi_sum.shape == (self._number_of_topics, 1));
             
-            document_phi = numpy.zeros((len(self._word_idss[doc_id]), self._number_of_topics));
+            document_phi = numpy.zeros((len(word_idss[doc_id]), self._number_of_topics));
 
             # collect phi samples from empirical distribution
             for it in xrange(number_of_samples):
-                for word_pos in xrange(len(self._word_idss[doc_id])):
-                    word_index = self._word_idss[doc_id][word_pos];
+                for word_pos in xrange(len(word_idss[doc_id])):
+                    word_index = word_idss[doc_id][word_pos];
                     
                     phi_sum -= phi[:, word_pos][:, numpy.newaxis];
                     
@@ -123,19 +134,19 @@ class Hybrid(VariationalBayes, Inferencer):
                     phi_sufficient_statistics[:, word_index] += temp_phi[:, 0];
                     document_phi[word_pos, :] += temp_phi[:, 0];
 
-            self._gamma[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
+            gamma_values[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
             #batch_document_topic_distribution[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
             
             document_phi /= (number_of_samples - burn_in_samples);
             document_phi += 1e-100;
-            likelihood_phi += numpy.sum(document_phi * (self._E_log_beta[:, self._word_idss[doc_id]].T - numpy.log(document_phi)));
+            likelihood_phi += numpy.sum(document_phi * (self._E_log_beta[:, word_idss[doc_id]].T - numpy.log(document_phi)));
             
             if (doc_id+1) % 1000==0:
                 print "successfully processed %d documents in hybrid mode..." % (doc_id+1);
 
         phi_sufficient_statistics /= (number_of_samples - burn_in_samples);
 
-        return phi_sufficient_statistics, likelihood_phi
+        return gamma_values, phi_sufficient_statistics, likelihood_phi
 
     '''
     def export_beta(self, exp_beta_path, top_display=-1):

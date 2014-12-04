@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import cPickle, string, numpy, getopt, sys, random, time, re, pprint
+import cPickle, getopt, sys, time, re
 import datetime, os;
 
 import scipy.io;
@@ -43,7 +43,7 @@ def parse_args():
     parser.add_option("--training_iterations", type="int", dest="training_iterations",
                       help="total number of iterations [-1]");
     parser.add_option("--snapshot_interval", type="int", dest="snapshot_interval",
-                      help="snapshot interval [vocab_prune_interval]");                      
+                      help="snapshot interval [10]");                      
                       
     # parameter set 3
     parser.add_option("--alpha_alpha", type="float", dest="alpha_alpha",
@@ -161,12 +161,12 @@ def main():
     print "========== ========== ========== ========== =========="
 
     # Document
-    train_docs_path = os.path.join(input_directory, 'doc.dat')
+    train_docs_path = os.path.join(input_directory, 'train.dat')
     input_doc_stream = open(train_docs_path, 'r');
     train_docs = [];
     for line in input_doc_stream:
         train_docs.append(line.strip().lower());
-    print "successfully load all training train docs from %s..." % (os.path.abspath(train_docs_path));
+    print "successfully load all training docs from %s..." % (os.path.abspath(train_docs_path));
     
     # Vocabulary
     vocabulary_path = os.path.join(input_directory, 'voc.dat');
@@ -179,24 +179,26 @@ def main():
     
     if inference_mode==0:
         import hybrid
-        lda_inference = hybrid.Hybrid();
+        lda_inferencer = hybrid.Hybrid();
     elif inference_mode==1:
         import monte_carlo
-        lda_inference = monte_carlo.MonteCarlo();
+        lda_inferencer = monte_carlo.MonteCarlo();
     elif inference_mode==2:
         import variational_bayes
-        lda_inference = variational_bayes.VariationalBayes();
+        lda_inferencer = variational_bayes.VariationalBayes();
     else:
         sys.stderr.write("error: unrecognized inference mode %d...\n" % (inference_mode));
         return;
     
-    lda_inference._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_eta);
+    lda_inferencer._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_eta);
     
     for iteration in xrange(training_iterations):
-        lda_inference.learning();
+        lda_inferencer.learning();
         
-        if (lda_inference._counter % snapshot_interval == 0):
-            lda_inference.export_beta(output_directory + 'exp_beta-' + str(lda_inference._counter));
+        if (lda_inferencer._counter % snapshot_interval == 0):
+            lda_inferencer.export_beta(output_directory + 'exp_beta-' + str(lda_inferencer._counter));
+            model_snapshot_path = os.path.join(output_directory, 'model-' + str(lda_inferencer._counter));
+            cPickle.dump(lda_inferencer, open(model_snapshot_path, 'wb'));
     
 if __name__ == '__main__':
     main()
