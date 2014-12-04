@@ -164,10 +164,11 @@ class VariationalBayes(Inferencer):
                 #log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (len(self._corpus[doc_id]), 1));
                 log_phi = self._E_log_beta[:, term_ids].T + numpy.tile(scipy.special.psi(gamma_values[[doc_id], :]), (word_ids[doc_id].shape[0], 1));
                 assert log_phi.shape==(len(term_ids), self._number_of_topics);
-                phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
-                assert(phi_normalizer.shape == (len(term_ids), 1));
-                log_phi -= phi_normalizer;
-                assert(log_phi.shape == (len(term_ids), self._number_of_topics));
+                #phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
+                #assert phi_normalizer.shape == (len(term_ids), 1);
+                #log_phi -= phi_normalizer;
+                log_phi -= scipy.misc.logsumexp(log_phi, axis=1)[:, numpy.newaxis];
+                assert log_phi.shape==(len(term_ids), self._number_of_topics);
                 
                 gamma_update = self._alpha_alpha + numpy.array(numpy.sum(numpy.exp(log_phi + numpy.log(term_counts.transpose())), axis=0));
                 
@@ -178,7 +179,7 @@ class VariationalBayes(Inferencer):
                 
             likelihood_phi += numpy.sum(numpy.exp(log_phi) * ((self._E_log_beta[:, term_ids].T * term_counts.transpose()) - log_phi));
             assert(log_phi.shape == (len(term_ids), self._number_of_topics));
-            phi_sufficient_statistics[:, term_ids] += numpy.exp(log_phi.T);
+            phi_sufficient_statistics[:, term_ids] += numpy.exp(log_phi + numpy.log(term_counts.transpose())).T;
             
             if (doc_id+1) % 1000==0:
                 print "successfully processed %d documents..." % (doc_id+1);

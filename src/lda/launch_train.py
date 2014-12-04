@@ -21,7 +21,7 @@ def parse_args():
 
                         # parameter set 3
                         alpha_alpha=-1,
-                        alpha_eta=1e-12,
+                        alpha_beta=1e-12,
                         
                         # parameter set 4
                         #disable_alpha_theta_update=False,
@@ -48,7 +48,7 @@ def parse_args():
     # parameter set 3
     parser.add_option("--alpha_alpha", type="float", dest="alpha_alpha",
                       help="hyper-parameter for Dirichlet distribution of topics [1.0/number_of_topics]")
-    parser.add_option("--alpha_eta", type="float", dest="alpha_eta",
+    parser.add_option("--alpha_beta", type="float", dest="alpha_beta",
                       help="hyper-parameter for Dirichlet distribution of vocabulary [1e-12]")
     
     # parameter set 4
@@ -82,8 +82,8 @@ def main():
     alpha_alpha = 1.0/number_of_topics;
     if options.alpha_alpha>0:
         alpha_alpha=options.alpha_alpha;
-    assert(options.alpha_eta>0);
-    alpha_eta = options.alpha_eta;
+    assert(options.alpha_beta>0);
+    alpha_beta = options.alpha_beta;
     
     # parameter set 4
     #disable_alpha_theta_update = options.disable_alpha_theta_update;
@@ -113,7 +113,7 @@ def main():
     suffix += "-S%d" % (snapshot_interval);
     suffix += "-K%d" % (number_of_topics);
     suffix += "-aa%f" % (alpha_alpha);
-    suffix += "-ae%f" % (alpha_eta);
+    suffix += "-ab%f" % (alpha_beta);
     suffix += "-im%d" % (inference_mode);
     # suffix += "-%s" % (resample_topics);
     # suffix += "-%s" % (hash_oov_words);
@@ -138,7 +138,7 @@ def main():
     options_output_file.write("number_of_topics=" + str(number_of_topics) + "\n");
     # parameter set 3
     options_output_file.write("alpha_alpha=" + str(alpha_alpha) + "\n");
-    options_output_file.write("alpha_eta=" + str(alpha_eta) + "\n");
+    options_output_file.write("alpha_beta=" + str(alpha_beta) + "\n");
     # parameter set 4
     options_output_file.write("inference_mode=%d\n" % (inference_mode));
     options_output_file.close()
@@ -155,7 +155,7 @@ def main():
     print "number_of_topics=" + str(number_of_topics)
     # parameter set 3
     print "alpha_alpha=" + str(alpha_alpha)
-    print "alpha_eta=" + str(alpha_eta)
+    print "alpha_beta=" + str(alpha_beta)
     # parameter set 4
     print "inference_mode=%d" % (inference_mode)
     print "========== ========== ========== ========== =========="
@@ -190,7 +190,7 @@ def main():
         sys.stderr.write("error: unrecognized inference mode %d...\n" % (inference_mode));
         return;
     
-    lda_inferencer._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_eta);
+    lda_inferencer._initialize(train_docs, vocab, number_of_topics, alpha_alpha, alpha_beta);
     
     for iteration in xrange(training_iterations):
         lda_inferencer.learning();
