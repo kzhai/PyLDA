@@ -21,7 +21,7 @@ def parse_args():
 
                         # parameter set 3
                         alpha_alpha=-1,
-                        alpha_beta=1e-12,
+                        alpha_beta=-1,
                         
                         # parameter set 4
                         #disable_alpha_theta_update=False,
@@ -49,7 +49,7 @@ def parse_args():
     parser.add_option("--alpha_alpha", type="float", dest="alpha_alpha",
                       help="hyper-parameter for Dirichlet distribution of topics [1.0/number_of_topics]")
     parser.add_option("--alpha_beta", type="float", dest="alpha_beta",
-                      help="hyper-parameter for Dirichlet distribution of vocabulary [1e-12]")
+                      help="hyper-parameter for Dirichlet distribution of vocabulary [1.0/number_of_types]")
     
     # parameter set 4
     #parser.add_option("--disable_alpha_theta_update", action="store_true", dest="disable_alpha_theta_update",
@@ -77,13 +77,6 @@ def main():
     assert(options.snapshot_interval>0);
     if options.snapshot_interval>0:
         snapshot_interval=options.snapshot_interval;
-        
-    # parameter set 3
-    alpha_alpha = 1.0/number_of_topics;
-    if options.alpha_alpha>0:
-        alpha_alpha=options.alpha_alpha;
-    assert(options.alpha_beta>0);
-    alpha_beta = options.alpha_beta;
     
     # parameter set 4
     #disable_alpha_theta_update = options.disable_alpha_theta_update;
@@ -104,6 +97,31 @@ def main():
     output_directory = os.path.join(output_directory, corpus_name);
     if not os.path.exists(output_directory):
         os.mkdir(output_directory);
+    
+    # Document
+    train_docs_path = os.path.join(input_directory, 'train.dat')
+    input_doc_stream = open(train_docs_path, 'r');
+    train_docs = [];
+    for line in input_doc_stream:
+        train_docs.append(line.strip().lower());
+    print "successfully load all training docs from %s..." % (os.path.abspath(train_docs_path));
+    
+    # Vocabulary
+    vocabulary_path = os.path.join(input_directory, 'voc.dat');
+    input_voc_stream = open(vocabulary_path, 'r');
+    vocab = [];
+    for line in input_voc_stream:
+        vocab.append(line.strip().lower().split()[0]);
+    vocab = list(set(vocab));
+    print "successfully load all the words from %s..." % (os.path.abspath(vocabulary_path));
+    
+    # parameter set 3
+    alpha_alpha = 1.0/number_of_topics;
+    if options.alpha_alpha>0:
+        alpha_alpha=options.alpha_alpha;
+    alpha_beta = options.alpha_beta;
+    if alpha_beta<=0:
+        alpha_beta = 1.0/len(vocab);
 
     # create output directory
     now = datetime.datetime.now();
@@ -159,23 +177,6 @@ def main():
     # parameter set 4
     print "inference_mode=%d" % (inference_mode)
     print "========== ========== ========== ========== =========="
-
-    # Document
-    train_docs_path = os.path.join(input_directory, 'train.dat')
-    input_doc_stream = open(train_docs_path, 'r');
-    train_docs = [];
-    for line in input_doc_stream:
-        train_docs.append(line.strip().lower());
-    print "successfully load all training docs from %s..." % (os.path.abspath(train_docs_path));
-    
-    # Vocabulary
-    vocabulary_path = os.path.join(input_directory, 'voc.dat');
-    input_voc_stream = open(vocabulary_path, 'r');
-    vocab = [];
-    for line in input_voc_stream:
-        vocab.append(line.strip().lower().split()[0]);
-    vocab = list(set(vocab));
-    print "successfully load all the words from %s..." % (os.path.abspath(vocabulary_path));
     
     if inference_mode==0:
         import hybrid
