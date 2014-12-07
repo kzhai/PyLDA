@@ -7,6 +7,7 @@ import time
 import numpy;
 import scipy
 import nltk;
+import sys;
 
 from inferencer import compute_dirichlet_expectation
 from inferencer import Inferencer
@@ -49,7 +50,8 @@ class Hybrid(VariationalBayes, Inferencer):
         self._gamma = numpy.tile(self._alpha_alpha + 1.0 * self._number_of_types / self._number_of_topics, (self._number_of_documents, 1));
         
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
-        self._E_log_beta = compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types)));
+        self._eta = numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types));
+        #self._E_log_eta = compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types)));
         #self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
         
     def parse_data(self, corpus=None):
@@ -69,6 +71,10 @@ class Hybrid(VariationalBayes, Inferencer):
                 type_id = self._type_to_index[token];
                 word_ids.append(type_id);
             
+            if len(word_ids)==0:
+                sys.stderr.write("warning: document collapsed during parsing");
+                continue;
+            
             word_idss.append(word_ids);
             
             doc_count+=1
@@ -86,9 +92,11 @@ class Hybrid(VariationalBayes, Inferencer):
             word_idss = parsed_corpus;
         number_of_documents = len(word_idss);
         
-        exp_E_log_beta = numpy.exp(self._E_log_beta);
+        E_log_eta = compute_dirichlet_expectation(self._eta)
+        exp_E_log_eta = numpy.exp(E_log_eta);
         
-        likelihood_phi = 0.0;
+        document_log_likelihood = 0;
+        words_log_likelihood = 0;
 
         # initialize a V-by-K matrix phi contribution
         phi_sufficient_statistics = numpy.zeros((self._number_of_topics, self._number_of_types));
@@ -116,7 +124,7 @@ class Hybrid(VariationalBayes, Inferencer):
                     phi_sum *= (phi_sum > 0);
                     #assert(numpy.all(phi_sum >= 0));
 
-                    temp_phi = (phi_sum.T + self._alpha_alpha) * exp_E_log_beta[:, [word_index]].T;
+                    temp_phi = (phi_sum.T + self._alpha_alpha) * exp_E_log_eta[:, [word_index]].T;
                     assert(temp_phi.shape == (1, self._number_of_topics));
                     temp_phi /= numpy.sum(temp_phi);
 
@@ -138,33 +146,32 @@ class Hybrid(VariationalBayes, Inferencer):
             #batch_document_topic_distribution[doc_id, :] = self._alpha_alpha + phi_sum.T[0, :];
             
             document_phi /= (number_of_samples - burn_in_samples);
+            # this is to prevent 0 during log()
             document_phi += 1e-100;
-            likelihood_phi += numpy.sum(document_phi * (self._E_log_beta[:, word_idss[doc_id]].T - numpy.log(document_phi)));
+            
+            # Note: all terms including E_q[p(\theta|\alpha)], i.e., terms involving \Psi(\gamma), are cancelled due to \gamma updates
+            # Note: all terms including E_q[p(\eta | \beta)], i.e., terms involving \Psi(\eta), are cancelled due to \eta updates in M-step
+            
+            # compute the alpha terms
+            document_log_likelihood += scipy.special.gammaln(numpy.sum(self._alpha_alpha)) - numpy.sum(scipy.special.gammaln(self._alpha_alpha))
+            # compute the gamma terms
+            document_log_likelihood += numpy.sum(scipy.special.gammaln(gamma_values[doc_id, :])) - scipy.special.gammaln(numpy.sum(gamma_values[doc_id, :]));
+            # compute the phi terms
+            document_log_likelihood -= numpy.sum(numpy.log(document_phi) * document_phi);
+            
+            # compute the p(w_{dn} | z_{dn}, \eta) terms, which will be cancelled during M-step
+            words_log_likelihood += numpy.sum(document_phi * (E_log_eta[:, word_idss[doc_id]].T));
             
             if (doc_id+1) % 1000==0:
                 print "successfully processed %d documents in hybrid mode..." % (doc_id+1);
 
         phi_sufficient_statistics /= (number_of_samples - burn_in_samples);
+        
+        if parsed_corpus==None:
+            self._gamma = gamma_values;
+            return document_log_likelihood, phi_sufficient_statistics
+        else:
+            return words_log_likelihood, gamma_values
 
-        return gamma_values, phi_sufficient_statistics, likelihood_phi
-
-    '''
-    def export_beta(self, exp_beta_path, top_display=-1):
-        output = open(exp_beta_path, 'w');
-        for topic_index in xrange(self._number_of_topics):
-            output.write("==========\t%d\t==========\n" % (topic_index));
-            
-            beta_probability = numpy.exp(self._E_log_beta[topic_index, :] - scipy.misc.logsumexp(self._E_log_beta[topic_index, :]));
-
-            i = 0;
-            for type_index in reversed(numpy.argsort(beta_probability)):
-                i += 1;
-                output.write("%s\t%g\n" % (self._index_to_type[type_index], beta_probability[type_index]));
-                if top_display > 0 and i >= top_display:
-                    break;
-                
-        output.close();
-    '''
-    
 if __name__ == "__main__":
     print "not implemented..."

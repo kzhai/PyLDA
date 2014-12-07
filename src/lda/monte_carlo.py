@@ -6,6 +6,7 @@
 import time;
 import numpy;
 import scipy;
+import sys;
 
 #from collections import defaultdict
 #from nltk import FreqDist
@@ -87,6 +88,10 @@ class MonteCarlo(Inferencer):
                 
                 type_id = self._type_to_index[token];
                 word_ids.append(type_id);
+            
+            if len(word_ids)==0:
+                sys.stderr.write("warning: document collapsed during parsing");
+                continue;
             
             self._word_idss.append(word_ids);
             
