@@ -191,14 +191,13 @@ class VariationalBayes(Inferencer):
                     break;
             
             # Note: all terms including E_q[p(\theta | \alpha)], i.e., terms involving \Psi(\gamma), are cancelled due to \gamma updates in E-step
-
             
             # compute the alpha terms
             document_log_likelihood += scipy.special.gammaln(numpy.sum(self._alpha_alpha)) - numpy.sum(scipy.special.gammaln(self._alpha_alpha))
             # compute the gamma terms
             document_log_likelihood += numpy.sum(scipy.special.gammaln(gamma_values[doc_id, :])) - scipy.special.gammaln(numpy.sum(gamma_values[doc_id, :]));
             # compute the phi terms
-            document_log_likelihood -= numpy.dot(term_counts, numpy.exp(log_phi) * log_phi);
+            document_log_likelihood -= numpy.sum(numpy.dot(term_counts, numpy.exp(log_phi) * log_phi));
             
             # Note: all terms including E_q[p(\eta | \beta)], i.e., terms involving \Psi(\eta), are cancelled due to \eta updates in M-step
             if parsed_corpus!=None:
