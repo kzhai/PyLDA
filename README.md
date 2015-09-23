@@ -15,7 +15,7 @@ This package depends on many external python libraries, such as numpy, scipy and
 Launch and Execute
 ----------
 
-Assume the PyLDA package is downloaded under directory '''$WORKSPACE/src/''', i.e., 
+Assume the PyLDA package is downloaded under directory ```$WORKSPACE/src/```, i.e., 
 
 	$WORKSPACE/src/PyLDA
 
