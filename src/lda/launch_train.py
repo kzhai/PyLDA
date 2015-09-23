@@ -25,7 +25,7 @@ def parse_args():
                         
                         # parameter set 4
                         #disable_alpha_theta_update=False,
-                        inference_mode=-1,
+                        inference_mode=0,
                         )
     # parameter set 1
     parser.add_option("--input_directory", type="string", dest="input_directory",
@@ -56,7 +56,7 @@ def parse_args():
                       #help="disable alpha (hyper-parameter for Dirichlet distribution of topics) update");
     parser.add_option("--inference_mode", type="int", dest="inference_mode",
                       help="inference mode [ " + 
-                            "0: hybrid inference, " + 
+                            "0 (default): hybrid inference, " + 
                             "1: monte carlo, " + 
                             "2: variational bayes " + 
                             "]");
