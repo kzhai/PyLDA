@@ -17,16 +17,16 @@ Launch and Execute
 
 Assume the PyLDA package is downloaded under directory '''$WORKSPACE/src/''', i.e., 
 
-       $WORKSPACE/src/PyLDA
+	$WORKSPACE/src/PyLDA
 
 First, redirect to the parent directory of PyLDA source code,
 
-   cd $WORKSPACE/src/
+	cd $WORKSPACE/src/
 
 To launch PyLDA, run the following command
    
-   python -m PyLDA.launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_DIRECTORY --output_directory=$OUTPUT_DIRECTORY --number_of_topics=10 --training_iterations=100 --inference_mode=0
+	python -m PyLDA.launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_DIRECTORY --output_directory=$OUTPUT_DIRECTORY --number_of_topics=10 --training_iterations=100 --inference_mode=0
 
 Under any cirsumstances, you may also get help information and usage hints by running the following command
 
-    python -m PyLDA.launch_train --help
+	python -m PyLDA.launch_train --help
