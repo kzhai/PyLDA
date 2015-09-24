@@ -19,11 +19,13 @@ Assume the PyLDA package is downloaded under directory ```$PROJECT_SPACE/src/```
 
 	$PROJECT_SPACE/src/PyLDA
 
-First, redirect to the parent directory of PyLDA source code,
+To prepare the dataset,
+
+To launch PyLDA, first redirect to the parent directory of PyLDA source code,
 
 	cd $PROJECT_SPACE/src/
 
-To launch PyLDA, run the following command
+and run the following command
    
 	python -m PyLDA.launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_DIRECTORY --output_directory=$OUTPUT_DIRECTORY --number_of_topics=10 --training_iterations=100 --inference_mode=0
 
