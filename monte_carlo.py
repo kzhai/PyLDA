@@ -12,7 +12,7 @@ import sys;
 #from nltk import FreqDist
 from inferencer import compute_dirichlet_expectation
 from inferencer import Inferencer;
-from matplotlib.pyplot import step
+#from matplotlib.pyplot import step
 
 """
 This is a python implementation of lda, based on collapsed Gibbs sampling, with hyper parameter updating.
