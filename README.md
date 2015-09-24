@@ -29,7 +29,7 @@ To launch PyLDA, first redirect to the parent directory of PyLDA source code,
 
 and run the following command on example dataset,
 
-	python -m PyLDA.launch_train --input_directory=PyLDA/associated-press --output_directory=PyLDA/ --number_of_topics=10 --training_iterations=100
+	python -m PyLDA.launch_train --input_directory=./PyLDA/associated-press --output_directory=./PyLDA/ --number_of_topics=10 --training_iterations=100
 
 The generic argument to run PyLDA is
 
