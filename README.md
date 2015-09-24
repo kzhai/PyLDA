@@ -35,6 +35,8 @@ The generic argument to run PyLDA is
 
 	python -m PyLDA.launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME --output_directory=$OUTPUT_DIRECTORY --number_of_topics=$NUMBER_OF_TOPICS --training_iterations=$NUMBER_OF_ITERATIONS
 
+You should be able to find the output at directory ```$OUTPUT_DIRECTORY/$CORPUS_NAME```.
+
 Under any cirsumstances, you may also get help information and usage hints by running the following command
 
 	python -m PyLDA.launch_train --help
