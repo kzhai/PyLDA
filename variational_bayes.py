@@ -240,11 +240,11 @@ class VariationalBayes(Inferencer):
     def learning(self):
         self._counter += 1;
         
-        clock_e_step = time.time();        
+        clock_e_step = time.time();
         document_log_likelihood, phi_sufficient_statistics = self.e_step();
         clock_e_step = time.time() - clock_e_step;
         
-        clock_m_step = time.time();        
+        clock_m_step = time.time();
         topic_log_likelihood, alpha_sufficient_statistics = self.m_step(phi_sufficient_statistics);
         if self._hyper_parameter_optimize_interval>0 and self._counter%self._hyper_parameter_optimize_interval==0:
             self.optimize_hyperparameters(alpha_sufficient_statistics);
