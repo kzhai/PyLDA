@@ -27,7 +27,7 @@ def parse_data(corpus, vocab):
     
     word_ids = [];
     word_cts = [];
-            
+    
     for document_line in corpus:
         #words = document_line.split();
         document_word_dict = []
