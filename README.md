@@ -23,20 +23,20 @@ To prepare the example dataset,
 
 	tar zxvf associated-press.tar.gz
 
-To launch PyLDA, first redirect to the parent directory of PyLDA source code,
+To launch PyLDA, first redirect to the directory of PyLDA source code,
 
-	cd $PROJECT_SPACE/src/
+	cd $PROJECT_SPACE/src/PyLDA
 
 and run the following command on example dataset,
 
-	python -m PyLDA.launch_train --input_directory=./PyLDA/associated-press --output_directory=./PyLDA/ --number_of_topics=10 --training_iterations=100
+	python -m launch_train --input_directory=./associated-press --output_directory=./ --number_of_topics=10 --training_iterations=100
 
 The generic argument to run PyLDA is
 
-	python -m PyLDA.launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME --output_directory=$OUTPUT_DIRECTORY --number_of_topics=$NUMBER_OF_TOPICS --training_iterations=$NUMBER_OF_ITERATIONS
+	python -m launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME --output_directory=$OUTPUT_DIRECTORY --number_of_topics=$NUMBER_OF_TOPICS --training_iterations=$NUMBER_OF_ITERATIONS
 
 You should be able to find the output at directory ```$OUTPUT_DIRECTORY/$CORPUS_NAME```.
 
 Under any cirsumstances, you may also get help information and usage hints by running the following command
 
-	python -m PyLDA.launch_train --help
+	python -m launch_train --help
