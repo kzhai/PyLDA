@@ -1,12 +1,12 @@
-PyLDA.vocab.prior.tree
+PyLDA/vocab/prior/tree
 ==========
 
-PyLDA.vocab.prior.tree is a Latent Dirichlet Allocation topic modeling
+PyLDA/vocab/prior/tree is a Latent Dirichlet Allocation topic modeling
 package with tree prior on vocabulary, developed by the Cloud
 Computing Research Team in [University of Maryland, College Park]
 (http://www.umd.edu).
 
-Please download the latest version from our [GitHub repository](https://github.com/kzhai/PyLDA.vocab.prior.tree).
+Please download the latest version from our [GitHub repository](https://github.com/kzhai/PyLDA/tree/master/vocab/prior/tree).
 
 Please send any bugs of problems to Ke Zhai (kzhai@umd.edu).
 
@@ -19,7 +19,7 @@ protocol-buffer, numpy, scipy and nltk.
 Launch and Execute
 ----------
 
-Assume the PyLDA.vocab.prior.tree package is downloaded under directory ```$PROJECT_SPACE/src/```, i.e., 
+Assume the PyLDA/vocab/prior/tree package is downloaded under directory ```$PROJECT_SPACE/src/```, i.e., 
 
 	$PROJECT_SPACE/src/PyLDA/vocab/prior/tree
 
@@ -27,9 +27,9 @@ To prepare the example dataset,
 
 	tar zxvf tree-synthetic.tar.gz
 
-To launch PyLDA.vocab.prior.tree, first redirect to the parent directory of PyLDA.vocab.prior.tree source code,
+To launch PyLDA/vocab/prior/tree, first redirect to the directory of PyLDA/vocab/prior/tree source code,
 
-	cd $PROJECT_SPACE/src/PyLDA/vocab/prior
+	cd $PROJECT_SPACE/src/PyLDA/vocab/prior/tree
 
 and run the following command on example dataset,
 
