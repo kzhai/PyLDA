@@ -1,10 +1,7 @@
 PyLDA/vocab/prior/tree
 ==========
 
-PyLDA/vocab/prior/tree is a Latent Dirichlet Allocation topic modeling
-package with tree prior on vocabulary, developed by the Cloud
-Computing Research Team in [University of Maryland, College Park]
-(http://www.umd.edu).
+PyLDA/vocab/prior/tree is a Latent Dirichlet Allocation topic modeling package with tree prior on vocabulary, developed by the Cloud Computing Research Team in [University of Maryland, College Park] (http://www.umd.edu).
 
 Please download the latest version from our [GitHub repository](https://github.com/kzhai/PyLDA/tree/master/vocab/prior/tree).
 
@@ -33,18 +30,11 @@ To launch PyLDA/vocab/prior/tree, first redirect to the directory of PyLDA/vocab
 
 and run the following command on example dataset,
 
-	python -m launch_train --input_directory=./tree-synthetic/
-	--output_directory=./ --number_of_topics=5
-	--training_iterations=50 --tree_name=tree1
+	python -m launch_train --input_directory=./tree-synthetic/ --output_directory=./ --number_of_topics=5 --training_iterations=50 --tree_name=tree1
 
 The generic argument to run PyLDA/vocab/prior/tree is
 
-	python -m launch_train
-    --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME
-    --output_directory=$OUTPUT_DIRECTORY
-    --number_of_topics=$NUMBER_OF_TOPICS
-    --training_iterations=$NUMBER_OF_ITERATIONS
-	--tree_name=$TREE_NAME
+	python -m launch_train --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME --output_directory=$OUTPUT_DIRECTORY --number_of_topics=$NUMBER_OF_TOPICS --training_iterations=$NUMBER_OF_ITERATIONS --tree_name=$TREE_NAME
 
 You should be able to find the output at directory ```$OUTPUT_DIRECTORY/$CORPUS_NAME```.
 
