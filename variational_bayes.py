@@ -277,7 +277,7 @@ class VariationalBayes(Inferencer):
     """
     def optimize_hyperparameters(self, alpha_sufficient_statistics, hyper_parameter_iteration=100, hyper_parameter_decay_factor=0.9, hyper_parameter_maximum_decay=10, hyper_parameter_converge_threshold=1e-6):
         #assert(alpha_sufficient_statistics.shape == (1, self._number_of_topics));
-        assert (alpha_sufficient_statistics.shape == (self._number_of_topics, ));        
+        assert (alpha_sufficient_statistics.shape == (self._number_of_topics, ));
         alpha_update = self._alpha_alpha;
         
         decay = 0;
