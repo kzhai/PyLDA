@@ -29,7 +29,7 @@ def parse_data(corpus, vocab):
     word_cts = [];
     
     for document_line in corpus:
-        #words = document_line.split();
+        # words = document_line.split();
         document_word_dict = []
         for token in document_line.split():
             if token in vocab:
@@ -42,8 +42,8 @@ def parse_data(corpus, vocab):
         word_ids.append(numpy.array(document_word_dict.keys()));
         word_cts.append(numpy.array(document_word_dict.values()));
         
-        doc_count+=1
-        if doc_count%10000==0:
+        doc_count += 1
+        if doc_count % 10000 == 0:
             print "successfully import %d documents..." % doc_count;
     
     print "successfully import %d documents..." % (doc_count);
@@ -56,21 +56,21 @@ class VariationalBayes(Inferencer):
     def __init__(self,
                  hyper_parameter_optimize_interval=1,
                  
-                 #hyper_parameter_iteration=100,
-                 #hyper_parameter_decay_factor=0.9,
-                 #hyper_parameter_maximum_decay=10,
-                 #hyper_parameter_converge_threshold=1e-6,
+                 # hyper_parameter_iteration=100,
+                 # hyper_parameter_decay_factor=0.9,
+                 # hyper_parameter_maximum_decay=10,
+                 # hyper_parameter_converge_threshold=1e-6,
                  
-                 #model_converge_threshold=1e-6
+                 # model_converge_threshold=1e-6
                  ):
         Inferencer.__init__(self, hyper_parameter_optimize_interval);
         
-        #self._hyper_parameter_iteration = hyper_parameter_iteration
-        #self._hyper_parameter_decay_factor = hyper_parameter_decay_factor;
-        #self._hyper_parameter_maximum_decay = hyper_parameter_maximum_decay;
-        #self._hyper_parameter_converge_threshold = hyper_parameter_converge_threshold;
+        # self._hyper_parameter_iteration = hyper_parameter_iteration
+        # self._hyper_parameter_decay_factor = hyper_parameter_decay_factor;
+        # self._hyper_parameter_maximum_decay = hyper_parameter_maximum_decay;
+        # self._hyper_parameter_converge_threshold = hyper_parameter_converge_threshold;
         
-        #self._model_converge_threshold = model_converge_threshold;
+        # self._model_converge_threshold = model_converge_threshold;
 
     """
     @param num_topics: the number of topics
@@ -91,11 +91,11 @@ class VariationalBayes(Inferencer):
 
         # initialize a V-by-K matrix beta, valued at 1/V, subject to the sum over every row is 1
         self._eta = numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types));
-        #self._E_log_eta = compute_dirichlet_expectation(self._eta);
+        # self._E_log_eta = compute_dirichlet_expectation(self._eta);
 
     def parse_data(self, corpus=None):
-        if corpus==None:
-            corpus=self._corpus;
+        if corpus == None:
+            corpus = self._corpus;
             
         doc_count = 0
         
@@ -103,7 +103,7 @@ class VariationalBayes(Inferencer):
         word_cts = [];
                 
         for document_line in corpus:
-            #words = document_line.split();
+            # words = document_line.split();
             document_word_dict = {}
             for token in document_line.split():
                 if token not in self._type_to_index:
@@ -114,31 +114,31 @@ class VariationalBayes(Inferencer):
                     document_word_dict[type_id] = 0;
                 document_word_dict[type_id] += 1;
             
-            if len(document_word_dict)==0:
+            if len(document_word_dict) == 0:
                 sys.stderr.write("warning: document collapsed during parsing");
                 continue;
             
             word_ids.append(numpy.array(document_word_dict.keys()));
             word_cts.append(numpy.array(document_word_dict.values())[numpy.newaxis, :]);
             
-            doc_count+=1
-            if doc_count%10000==0:
+            doc_count += 1
+            if doc_count % 10000 == 0:
                 print "successfully parse %d documents..." % doc_count;
         
-        assert len(word_ids)==len(word_cts);
+        assert len(word_ids) == len(word_cts);
         print "successfully parse %d documents..." % (doc_count);
         
         return (word_ids, word_cts)
         
     def e_step(self, parsed_corpus=None, local_parameter_iteration=50, local_parameter_converge_threshold=1e-6):
-        if parsed_corpus==None:
+        if parsed_corpus == None:
             word_ids = self._parsed_corpus[0];
             word_cts = self._parsed_corpus[1];
         else:
             word_ids = parsed_corpus[0]
             word_cts = parsed_corpus[1];
         
-        assert len(word_ids)==len(word_cts);
+        assert len(word_ids) == len(word_cts);
         number_of_documents = len(word_ids);
         
         document_log_likelihood = 0;
@@ -151,37 +151,37 @@ class VariationalBayes(Inferencer):
         gamma_values = numpy.zeros((number_of_documents, self._number_of_topics)) + self._alpha_alpha[numpy.newaxis, :] + 1.0 * self._number_of_types / self._number_of_topics;
         
         E_log_eta = compute_dirichlet_expectation(self._eta);
-        assert E_log_eta.shape==(self._number_of_topics, self._number_of_types);
-        if parsed_corpus!=None:
-            E_log_prob_eta = E_log_eta-scipy.misc.logsumexp(E_log_eta, axis=1)[:, numpy.newaxis]
+        assert E_log_eta.shape == (self._number_of_topics, self._number_of_types);
+        if parsed_corpus != None:
+            E_log_prob_eta = E_log_eta - scipy.misc.logsumexp(E_log_eta, axis=1)[:, numpy.newaxis]
         
         # iterate over all documents
-        #for doc_id in xrange(number_of_documents):
+        # for doc_id in xrange(number_of_documents):
         for doc_id in numpy.random.permutation(number_of_documents):
             # compute the total number of words
-            #total_word_count = self._corpus[doc_id].N()
+            # total_word_count = self._corpus[doc_id].N()
             total_word_count = numpy.sum(word_cts[doc_id]);
 
             # initialize gamma for this document
             gamma_values[doc_id, :] = self._alpha_alpha + 1.0 * total_word_count / self._number_of_topics;
             
-            #term_ids = numpy.array(self._corpus[doc_id].keys());
-            #term_counts = numpy.array([self._corpus[doc_id].values()]);
+            # term_ids = numpy.array(self._corpus[doc_id].keys());
+            # term_counts = numpy.array([self._corpus[doc_id].values()]);
             term_ids = word_ids[doc_id];
             term_counts = word_cts[doc_id];
             assert term_counts.shape == (1, len(term_ids));
 
             # update phi and gamma until gamma converges
             for gamma_iteration in xrange(local_parameter_iteration):
-                assert E_log_eta.shape==(self._number_of_topics, self._number_of_types);
-                #log_phi = self._E_log_eta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (len(self._corpus[doc_id]), 1));
+                assert E_log_eta.shape == (self._number_of_topics, self._number_of_types);
+                # log_phi = self._E_log_eta[:, term_ids].T + numpy.tile(scipy.special.psi(self._gamma[[doc_id], :]), (len(self._corpus[doc_id]), 1));
                 log_phi = E_log_eta[:, term_ids].T + numpy.tile(scipy.special.psi(gamma_values[[doc_id], :]), (word_ids[doc_id].shape[0], 1));
-                assert log_phi.shape==(len(term_ids), self._number_of_topics);
-                #phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
-                #assert phi_normalizer.shape == (len(term_ids), 1);
-                #log_phi -= phi_normalizer;
+                assert log_phi.shape == (len(term_ids), self._number_of_topics);
+                # phi_normalizer = numpy.log(numpy.sum(numpy.exp(log_phi), axis=1)[:, numpy.newaxis]);
+                # assert phi_normalizer.shape == (len(term_ids), 1);
+                # log_phi -= phi_normalizer;
                 log_phi -= scipy.misc.logsumexp(log_phi, axis=1)[:, numpy.newaxis];
-                assert log_phi.shape==(len(term_ids), self._number_of_topics);
+                assert log_phi.shape == (len(term_ids), self._number_of_topics);
                 
                 gamma_update = self._alpha_alpha + numpy.array(numpy.sum(numpy.exp(log_phi + numpy.log(term_counts.transpose())), axis=0));
                 
@@ -200,17 +200,17 @@ class VariationalBayes(Inferencer):
             document_log_likelihood -= numpy.sum(numpy.dot(term_counts, numpy.exp(log_phi) * log_phi));
             
             # Note: all terms including E_q[p(\eta | \beta)], i.e., terms involving \Psi(\eta), are cancelled due to \eta updates in M-step
-            if parsed_corpus!=None:
+            if parsed_corpus != None:
                 # compute the p(w_{dn} | z_{dn}, \eta) terms, which will be cancelled during M-step during training
                 words_log_likelihood += numpy.sum(numpy.exp(log_phi.T + numpy.log(term_counts)) * E_log_prob_eta[:, term_ids]);
             
             assert(log_phi.shape == (len(term_ids), self._number_of_topics));
             phi_sufficient_statistics[:, term_ids] += numpy.exp(log_phi + numpy.log(term_counts.transpose())).T;
             
-            if (doc_id+1) % 1000==0:
-                print "successfully processed %d documents..." % (doc_id+1);
+            if (doc_id + 1) % 1000 == 0:
+                print "successfully processed %d documents..." % (doc_id + 1);
         
-        if parsed_corpus==None:
+        if parsed_corpus == None:
             self._gamma = gamma_values;
             return document_log_likelihood, phi_sufficient_statistics
         else:
@@ -224,14 +224,14 @@ class VariationalBayes(Inferencer):
         # compute the eta terms
         topic_log_likelihood += numpy.sum(numpy.sum(scipy.special.gammaln(self._eta), axis=1) - scipy.special.gammaln(numpy.sum(self._eta, axis=1)));
         
-        self._eta = phi_sufficient_statistics+self._alpha_beta;
+        self._eta = phi_sufficient_statistics + self._alpha_beta;
         assert(self._eta.shape == (self._number_of_topics, self._number_of_types));
         
-        #self._E_log_eta = compute_dirichlet_expectation(self._eta);
+        # self._E_log_eta = compute_dirichlet_expectation(self._eta);
         
         # compute the sufficient statistics for alpha and update
         alpha_sufficient_statistics = scipy.special.psi(self._gamma) - scipy.special.psi(numpy.sum(self._gamma, axis=1)[:, numpy.newaxis]);
-        alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0);#[numpy.newaxis, :];
+        alpha_sufficient_statistics = numpy.sum(alpha_sufficient_statistics, axis=0);  # [numpy.newaxis, :];
         
         return topic_log_likelihood, alpha_sufficient_statistics
 
@@ -246,7 +246,7 @@ class VariationalBayes(Inferencer):
         
         clock_m_step = time.time();
         topic_log_likelihood, alpha_sufficient_statistics = self.m_step(phi_sufficient_statistics);
-        if self._hyper_parameter_optimize_interval>0 and self._counter%self._hyper_parameter_optimize_interval==0:
+        if self._hyper_parameter_optimize_interval > 0 and self._counter % self._hyper_parameter_optimize_interval == 0:
             self.optimize_hyperparameters(alpha_sufficient_statistics);
         clock_m_step = time.time() - clock_m_step;
         
@@ -254,10 +254,10 @@ class VariationalBayes(Inferencer):
         
         print "e_step and m_step of iteration %d finished in %d and %d seconds respectively with log likelihood %g" % (self._counter, clock_e_step, clock_m_step, joint_log_likelihood)
         
-        #if abs((joint_log_likelihood - old_likelihood) / old_likelihood) < self._model_converge_threshold:
-            #print "model likelihood converged..."
-            #break
-        #old_likelihood = joint_log_likelihood;
+        # if abs((joint_log_likelihood - old_likelihood) / old_likelihood) < self._model_converge_threshold:
+            # print "model likelihood converged..."
+            # break
+        # old_likelihood = joint_log_likelihood;
         
         return joint_log_likelihood
 
@@ -276,8 +276,8 @@ class VariationalBayes(Inferencer):
     @param alpha_sufficient_statistics: a dict data type represents alpha sufficient statistics for alpha updating, indexed by topic_id
     """
     def optimize_hyperparameters(self, alpha_sufficient_statistics, hyper_parameter_iteration=100, hyper_parameter_decay_factor=0.9, hyper_parameter_maximum_decay=10, hyper_parameter_converge_threshold=1e-6):
-        #assert(alpha_sufficient_statistics.shape == (1, self._number_of_topics));
-        assert (alpha_sufficient_statistics.shape == (self._number_of_topics, ));
+        # assert(alpha_sufficient_statistics.shape == (1, self._number_of_topics));
+        assert (alpha_sufficient_statistics.shape == (self._number_of_topics,));
         alpha_update = self._alpha_alpha;
         
         decay = 0;
@@ -300,7 +300,7 @@ class VariationalBayes(Inferencer):
                 singular_hessian = False
 
                 step_size = numpy.power(hyper_parameter_decay_factor, decay) * (alpha_gradient - c) / alpha_hessian;
-                #print "step size is", step_size
+                # print "step size is", step_size
                 assert(self._alpha_alpha.shape == step_size.shape);
                 
                 if numpy.any(self._alpha_alpha <= step_size):

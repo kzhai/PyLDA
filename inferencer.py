@@ -30,15 +30,15 @@ class Inferencer():
     """
     """
     def __init__(self,
-                 #local_parameter_iterations=50,
+                 # local_parameter_iterations=50,
                  hyper_parameter_optimize_interval=10,
                  ):
         
         self._hyper_parameter_optimize_interval = hyper_parameter_optimize_interval;
-        assert(self._hyper_parameter_optimize_interval>0);
+        assert(self._hyper_parameter_optimize_interval > 0);
         
-        #self._local_parameter_iterations = local_parameter_iterations
-        #assert(self._local_maximum_iteration>0)
+        # self._local_parameter_iterations = local_parameter_iterations
+        # assert(self._local_maximum_iteration>0)
 
     """
     """
