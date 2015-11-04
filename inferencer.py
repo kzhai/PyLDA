@@ -38,7 +38,7 @@ class Inferencer():
         assert(self._hyper_parameter_optimize_interval>0);
         
         #self._local_parameter_iterations = local_parameter_iterations
-        #assert(self._local_maximum_iteration>0)        
+        #assert(self._local_maximum_iteration>0)
 
     """
     """
