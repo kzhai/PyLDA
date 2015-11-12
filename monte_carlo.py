@@ -46,11 +46,10 @@ class MonteCarlo(Inferencer):
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
         Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
         
-        self._corpus = corpus;
-        self.parse_data();
+        self._parsed_corpus = self.parse_data(corpus);
         
         # define the total number of document
-        self._number_of_documents = len(self._word_idss);
+        self._number_of_documents = len(self._parsed_corpus);
         
         # define the counts over different topics for all documents, first indexed by doc_id id, the indexed by topic id
         self._n_dk = numpy.zeros((self._number_of_documents, self._number_of_topics));
@@ -65,9 +64,9 @@ class MonteCarlo(Inferencer):
     def random_initialize(self):
         # initialize the vocabulary, i.e. a list of distinct tokens.
         for doc_id in xrange(self._number_of_documents):
-            self._k_dn[doc_id] = numpy.zeros(len(self._word_idss[doc_id]));
-            for word_pos in xrange(len(self._word_idss[doc_id])):
-                type_index = self._word_idss[doc_id][word_pos];
+            self._k_dn[doc_id] = numpy.zeros(len(self._parsed_corpus[doc_id]));
+            for word_pos in xrange(len(self._parsed_corpus[doc_id])):
+                type_index = self._parsed_corpus[doc_id][word_pos];
                 topic_index = numpy.random.randint(self._number_of_topics);
                 
                 self._k_dn[doc_id][word_pos] = topic_index;
@@ -75,12 +74,12 @@ class MonteCarlo(Inferencer):
                 self._n_kv[topic_index, type_index] += 1;
                 self._n_k[topic_index] += 1;
         
-    def parse_data(self):
+    def parse_data(self, corpus):
         doc_count = 0
         
-        self._word_idss = [];
+        word_idss = [];
         
-        for document_line in self._corpus:
+        for document_line in corpus:
             word_ids = [];
             for token in document_line.split():
                 if token not in self._type_to_index:
@@ -93,13 +92,15 @@ class MonteCarlo(Inferencer):
                 sys.stderr.write("warning: document collapsed during parsing");
                 continue;
             
-            self._word_idss.append(word_ids);
+            word_idss.append(word_ids);
             
             doc_count+=1
             if doc_count%10000==0:
                 print "successfully parse %d documents..." % doc_count;
         
-        print "successfully parse %d documents..." % (doc_count);        
+        print "successfully parse %d documents..." % (doc_count);
+        
+        return word_idss        
         
     """
     """
@@ -258,15 +259,15 @@ class MonteCarlo(Inferencer):
     """
     this method samples the word at position in document, by covering that word and compute its new topic distribution, in the end, both self._k_dn, self._n_dk and self._n_kv will change
     @param doc_id: a document id
-    @param position: the position in doc_id, ranged as range(self._word_idss[doc_id])
+    @param position: the position in doc_id, ranged as range(self._parsed_corpus[doc_id])
     """
     def sample_document(self, doc_id, local_parameter_iteration=1):
         for iter in xrange(local_parameter_iteration):
-            for position in xrange(len(self._word_idss[doc_id])):
-                assert position >= 0 and position < len(self._word_idss[doc_id])
+            for position in xrange(len(self._parsed_corpus[doc_id])):
+                assert position >= 0 and position < len(self._parsed_corpus[doc_id])
                 
                 #retrieve the word_id
-                word_id = self._word_idss[doc_id][position]
+                word_id = self._parsed_corpus[doc_id][position]
             
                 #get the old topic assignment to the word_id in doc_id at position
                 old_topic = self._k_dn[doc_id][position]

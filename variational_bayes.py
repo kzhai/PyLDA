@@ -80,8 +80,8 @@ class VariationalBayes(Inferencer):
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
         Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
 
-        self._corpus = corpus;
-        self._parsed_corpus = self.parse_data();
+        #self._corpus = corpus;
+        self._parsed_corpus = self.parse_data(corpus);
         
         # define the total number of document
         self._number_of_documents = len(self._parsed_corpus[0]);
@@ -93,15 +93,12 @@ class VariationalBayes(Inferencer):
         self._eta = numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types));
         # self._E_log_eta = compute_dirichlet_expectation(self._eta);
 
-    def parse_data(self, corpus=None):
-        if corpus == None:
-            corpus = self._corpus;
-            
+    def parse_data(self, corpus):
         doc_count = 0
         
         word_ids = [];
         word_cts = [];
-                
+        
         for document_line in corpus:
             # words = document_line.split();
             document_word_dict = {}
