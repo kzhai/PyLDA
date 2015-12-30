@@ -100,7 +100,7 @@ class MonteCarlo(Inferencer):
         
         print "successfully parse %d documents..." % (doc_count);
         
-        return word_idss        
+        return word_idss
         
     """
     """
