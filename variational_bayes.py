@@ -22,6 +22,7 @@ References:
 [1] D. Blei, A. Ng, and M. Jordan. Latent Dirichlet Allocation. Journal of Machine Learning Research, 3:993-1022, January 2003.
 """
 
+'''
 def parse_data(corpus, vocab):
     doc_count = 0
     
@@ -49,6 +50,7 @@ def parse_data(corpus, vocab):
     print "successfully import %d documents..." % (doc_count);
     
     return word_ids, word_cts
+'''
 
 class VariationalBayes(Inferencer):
     """
