@@ -39,8 +39,8 @@ class Hybrid(VariationalBayes, Inferencer):
     def _initialize(self, corpus, vocab, number_of_topics, alpha_alpha, alpha_beta):
         Inferencer._initialize(self, vocab, number_of_topics, alpha_alpha, alpha_beta);
         
-        self._corpus = corpus;
-        self._parsed_corpus = self.parse_data();
+        # self._corpus = corpus;
+        self._parsed_corpus = self.parse_data(corpus);
         
         # define the total number of document
         self._number_of_documents = len(self._parsed_corpus);
@@ -54,10 +54,7 @@ class Hybrid(VariationalBayes, Inferencer):
         #self._E_log_eta = compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types)));
         #self._exp_E_log_beta = numpy.exp(compute_dirichlet_expectation(numpy.random.gamma(100., 1. / 100., (self._number_of_topics, self._number_of_types))));
         
-    def parse_data(self, corpus=None):
-        if corpus==None:
-            corpus = self._corpus;
-            
+    def parse_data(self, corpus):
         doc_count = 0
         
         word_idss = [];
