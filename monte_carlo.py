@@ -16,7 +16,6 @@ from inferencer import Inferencer;
 
 """
 This is a python implementation of lda, based on collapsed Gibbs sampling, with hyper parameter updating.
-It only supports symmetric Dirichlet prior over the topic simplex.
 
 References:
 [1] T. L. Griffiths & M. Steyvers. Finding Scientific Topics. Proceedings of the National Academy of Sciences, 101, 5228-5235, 2004.
