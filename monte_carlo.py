@@ -120,7 +120,7 @@ class MonteCarlo(Inferencer):
                 l_log_alpha_alpha -= numpy.random.random() * hyper_parameter_step
             else:
                 l_log_alpha_alpha -= numpy.random.random(old_log_alpha_alpha.shape) * hyper_parameter_step
-            r_log_alpha_alpha = old_log_alpha_alpha + hyper_parameter_step;
+            r_log_alpha_alpha = l_log_alpha_alpha + hyper_parameter_step;
             assert numpy.all(l_log_alpha_alpha <= old_log_alpha_alpha), (l_log_alpha_alpha, old_log_alpha_alpha);
             assert numpy.all(r_log_alpha_alpha >= old_log_alpha_alpha), (r_log_alpha_alpha, old_log_alpha_alpha);
             
@@ -129,7 +129,7 @@ class MonteCarlo(Inferencer):
                 l_log_alpha_beta -= numpy.random.random() * hyper_parameter_step
             else:
                 l_log_alpha_beta -= numpy.random.random(old_log_alpha_beta.shape) * hyper_parameter_step
-            r_log_alpha_beta = old_log_alpha_beta + hyper_parameter_step;
+            r_log_alpha_beta = l_log_alpha_beta + hyper_parameter_step;
             assert numpy.all(l_log_alpha_beta <= old_log_alpha_beta), (l_log_alpha_beta, old_log_alpha_beta);
             assert numpy.all(r_log_alpha_beta >= old_log_alpha_beta), (r_log_alpha_beta, old_log_alpha_beta);
             
