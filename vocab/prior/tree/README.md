@@ -41,3 +41,11 @@ You should be able to find the output at directory ```$OUTPUT_DIRECTORY/$CORPUS_
 Under any cirsumstances, you may also get help information and usage hints by running the following command
 
 	python -m launch_train --help
+
+To run inference on held-out test set,
+
+	python -m launch_test --input_directory=./tree-synthetic/ --model_directory=./tree-synthetic/160709-154121-lda-I50-S10-K5-aa0.200000-im0/
+
+The generic argument to run inference on held-out test set,
+
+	python -m launch_test --input_directory=$INPUT_DIRECTORY/$CORPUS_NAME --model_directory=$MODEL_DIRECTORY

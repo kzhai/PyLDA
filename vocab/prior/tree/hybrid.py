@@ -208,6 +208,8 @@ class Hybrid(VariationalBayes):
     def e_step(self, parsed_corpus=None, number_of_samples=10, burn_in_samples=5):
         if parsed_corpus == None:
             documents = self._parsed_corpus
+        else:
+            documents = parsed_corpus
         
         number_of_documents = len(documents);
 
@@ -229,16 +231,13 @@ class Hybrid(VariationalBayes):
 
         # iterate over all documents
         for document_index in xrange(number_of_documents):
-            # compute the total number of words
-            # total_word_count = self._parsed_corpus[document_index].N()
-            
             document_gamma = numpy.zeros(self._alpha_alpha.shape);
             
             topic_path_assignment = {};
             topic_sum = numpy.zeros((1, self._number_of_topics));
-            for word_index in xrange(len(self._parsed_corpus[document_index])):
+            for word_index in xrange(len(documents[document_index])):
                 topic_assignment = numpy.random.randint(0, self._number_of_topics);
-                path_assignment = numpy.random.randint(0, len(self._word_index_to_path_indices[self._parsed_corpus[document_index][word_index]]));
+                path_assignment = numpy.random.randint(0, len(self._word_index_to_path_indices[documents[document_index][word_index]]));
                 topic_path_assignment[word_index] = (topic_assignment, path_assignment);
                 topic_sum[0, topic_assignment] += 1;
             del word_index, topic_assignment, path_assignment;
@@ -248,10 +247,10 @@ class Hybrid(VariationalBayes):
                 # document_phi = numpy.zeros((self._number_of_topics, self._number_of_paths));
                 
                 phi_entropy = 0;
-                phi_E_log_beta = 0;
+                phi_E_log_eta = 0;
                 
-                for word_index in xrange(len(self._parsed_corpus[document_index])):
-                    word_id = self._parsed_corpus[document_index][word_index];
+                for word_index in xrange(len(documents[document_index])):
+                    word_id = documents[document_index][word_index];
                     topic_sum[0, topic_path_assignment[word_index][0]] -= 1;
                     
                     paths_lead_to_current_word = self._word_index_to_path_indices[word_id];
@@ -285,14 +284,16 @@ class Hybrid(VariationalBayes):
                     
                     if sample_index >= burn_in_samples:
                         phi_sufficient_statistics[topic_index, paths_lead_to_current_word[path_index]] += 1;
+                    
+                    #
+                    #
+                    #
+                    #
+                    #
                         
-                    '''
-                    #phi_entropy += - numpy.sum((path_phi+1e-100) * numpy.log(path_phi+1e-100))
-                    phi_entropy += - numpy.sum(path_phi * numpy.log(path_phi))
-                    for path_index in xrange(len(paths_lead_to_current_word)):
-                        phi_E_log_beta += numpy.sum(path_phi[:, [path_index]] * numpy.sum(self._E_log_beta[:, self._edges_along_path[paths_lead_to_current_word[path_index]]], axis=1)[:, numpy.newaxis])
-                    del path_index
-                    '''
+                    for position_index in xrange(len(paths_lead_to_current_word)):
+                        phi_E_log_eta += numpy.sum(path_phi[:, [position_index]] * numpy.sum(E_log_eta[:, self._edges_along_path[paths_lead_to_current_word[position_index]]], axis=1)[:, numpy.newaxis])
+                    del position_index
                     
                 del word_index, paths_lead_to_current_word
                 

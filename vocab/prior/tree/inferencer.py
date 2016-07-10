@@ -330,6 +330,7 @@ class Inferencer():
                 self._E_log_beta[node_index] = compute_dirichlet_expectation(numpy.random.gamma(100., 1./100., (self._number_of_topics, len(node._children_offsets))));
         '''
 
+    '''
     # TODO: make sure the data is properly stored...
     def test(self, data):
         # train_data = self._data;
@@ -349,6 +350,7 @@ class Inferencer():
         # self._number_of_documents = len(train_data);
 
         return test_gamma
+    '''
 
     """
     @param alpha_vector: a dict data type represents dirichlet prior, indexed by topic_id

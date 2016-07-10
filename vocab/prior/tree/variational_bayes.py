@@ -143,6 +143,8 @@ class VariationalBayes(Inferencer):
     def e_step(self, parsed_corpus=None, local_parameter_iteration=50, local_parameter_converge_threshold=1e-6):
         if parsed_corpus == None:
             documents = self._parsed_corpus
+        else:
+            documents = parsed_corpus
         
         number_of_documents = len(documents);
 
@@ -295,6 +297,18 @@ class VariationalBayes(Inferencer):
         print "e_step and m_step of iteration %d finished in %d and %d seconds respectively with log likelihood %g" % (self._counter, clock_e_step, clock_m_step, joint_log_likelihood)
         
         return joint_log_likelihood
+    
+    def inference(self, corpus):
+        # initialize the documents, key by the document path, value by a list of non-stop and tokenized words, with duplication.
+        parsed_corpus = self.parse_data(corpus);
+        
+        clock_e_step = time.time();
+        words_log_likelihood, gamma_values = self.e_step(parsed_corpus);
+        clock_e_step = time.time() - clock_e_step;
+        
+        print "e_step finished in %d seconds respectively with log likelihood %g" % (clock_e_step, words_log_likelihood)
+        
+        return words_log_likelihood, gamma_values
 
     def export_beta(self, exp_beta_path, top_display=-1):
         output = open(exp_beta_path, 'w');
