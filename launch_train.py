@@ -198,6 +198,7 @@ def main():
         
         if (lda_inferencer._counter % snapshot_interval == 0):
             lda_inferencer.export_beta(output_directory + 'exp_beta-' + str(lda_inferencer._counter));
+            lda_inferencer.export_gamma(output_directory + 'exp_gamma-' + str(lda_inferencer._counter));
     
     model_snapshot_path = os.path.join(output_directory, 'model-' + str(lda_inferencer._counter));
     cPickle.dump(lda_inferencer, open(model_snapshot_path, 'wb'));

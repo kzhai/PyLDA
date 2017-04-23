@@ -81,6 +81,10 @@ class Inferencer():
 
     def export_beta(self, exp_beta_path, top_display=-1):
         raise NotImplementedError;
+
+
+    def export_gamma(self, exp_gamma_path, top_display=-1):
+        raise NotImplementedError
         
 if __name__ == "__main__":
     raise NotImplementedError;

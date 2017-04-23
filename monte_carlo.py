@@ -336,5 +336,20 @@ class MonteCarlo(Inferencer):
                 
         output.close();
 
+    def export_gamma(self, exp_gamma_path, top_display=-1):
+        output = open(exp_gamma_path, 'w');
+        gamma_probability = 1.0 * self._n_dk / numpy.sum(self._n_dk, axis=1)[:, numpy.newaxis];
+        for document_index in xrange(self._number_of_documents):
+            i = 0;
+            topic_probabilities = [];
+            for topic_index in reversed(numpy.argsort(gamma_probability[document_index, :])):
+                i += 1;
+                topic_probabilities.append("%d:%g" % (topic_index, gamma_probability[document_index, topic_index]));
+                if top_display > 0 and i >= top_display:
+                    break;
+            output.write("%s\n" % "\t".join(topic_probabilities));
+
+        output.close();
+
 if __name__ == "__main__":
     print "not implemented"
