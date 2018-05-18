@@ -1,7 +1,7 @@
 PyLDA
 ==========
 
-PyLDA is a Latent Dirichlet Allocation topic modeling package, developed by the Cloud Computing Research Team in [University of Maryland, College Park] (http://www.umd.edu).
+PyLDA is a Latent Dirichlet Allocation topic modeling package, developed by the Cloud Computing Research Team in [University of Maryland, College Park](http://www.umd.edu).
 
 Please download the latest version from our [GitHub repository](https://github.com/kzhai/PyLDA).
 
